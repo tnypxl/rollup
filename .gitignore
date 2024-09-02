@@ -1,0 +1,35 @@
+# Aider-specific files and folders
+.aider*
+.aider/
+aider-*
+.aider.chat.history.md
+.aider.ident.json
+.aider.tags.json
+
+# Temporary files created by Aider
+*.aider.tmp
+
+# Logs
+aider.log
+
+# Cached files
+.aider_cache/# Binaries for programs and plugins
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
