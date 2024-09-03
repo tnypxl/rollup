@@ -1,0 +1,3 @@
+- Use golang for all code.
+- Use cobra for all CLI commands.
+- Use a modular approach for code organization.

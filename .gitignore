@@ -1,20 +1,3 @@
-# Aider-specific files and folders
-.aider*
-.aider/
-aider-*
-.aider.chat.history.md
-.aider.ident.json
-.aider.tags.json
-
-# Temporary files created by Aider
-*.aider.tmp
-
-# Logs
-aider.log
-
-# Cached files
-.aider_cache/# Binaries for programs and plugins
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
