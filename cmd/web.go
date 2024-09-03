@@ -72,17 +72,26 @@ func summarizeContent(content string) (string, error) {
 	ctx := context.Background()
 	msg, err := client.Messages.Create(ctx, &anthropic.MessageCreateParams{
 		Model: anthropic.Claude3Sonnet20240229,
-		MaxTokens: 1000,
-		System: "You are a helpful assistant that summarizes web content in markdown format.",
-		Messages: []anthropic.Message{
+		MaxTokens: anthropic.IntPtr(1000),
+		System: anthropic.StringPtr("You are a helpful assistant that summarizes web content in markdown format."),
+		Messages: []anthropic.MessageParam{
 			{
 				Role: anthropic.MessageRoleUser,
-				Content: fmt.Sprintf("Summarize the following web content in markdown format:\n\n%s", content),
+				Content: []anthropic.Content{
+					{
+						Type: anthropic.ContentTypeText,
+						Text: fmt.Sprintf("Summarize the following web content in markdown format:\n\n%s", content),
+					},
+				},
 			},
 		},
 	})
 	if err != nil {
 		return "", err
+	}
+
+	if len(msg.Content) == 0 || msg.Content[0].Type != anthropic.ContentTypeText {
+		return "", fmt.Errorf("unexpected response format")
 	}
 
 	return msg.Content[0].Text, nil
