@@ -16,3 +16,6 @@
 
 # Go workspace file
 go.work
+
+# Ignore rollup output files
+*rollup*.md
