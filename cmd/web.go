@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -63,10 +64,14 @@ func fetchWebContent(url string) (string, error) {
 }
 
 func summarizeContent(content string) (string, error) {
-	client := anthropic.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
+	client, err := anthropic.NewClient(os.Getenv("ANTHROPIC_API_KEY"))
+	if err != nil {
+		return "", fmt.Errorf("error creating Anthropic client: %v", err)
+	}
 
-	resp, err := client.CreateCompletion(anthropic.CompletionRequest{
-		Model:     "claude-2",
+	ctx := context.Background()
+	resp, err := client.Complete(ctx, &anthropic.CompletionRequest{
+		Model:     anthropic.Claude2,
 		Prompt:    fmt.Sprintf("Human: Summarize the following web content in markdown format:\n\n%s\n\nAssistant:", content),
 		MaxTokens: 1000,
 	})
