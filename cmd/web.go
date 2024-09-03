@@ -70,16 +70,22 @@ func summarizeContent(content string) (string, error) {
 	}
 
 	ctx := context.Background()
-	resp, err := client.Complete(ctx, &anthropic.CompletionRequest{
-		Model:     anthropic.Claude2,
-		Prompt:    fmt.Sprintf("Human: Summarize the following web content in markdown format:\n\n%s\n\nAssistant:", content),
+	msg, err := client.Messages.Create(ctx, &anthropic.MessageCreateParams{
+		Model: anthropic.Claude3Sonnet20240229,
 		MaxTokens: 1000,
+		System: "You are a helpful assistant that summarizes web content in markdown format.",
+		Messages: []anthropic.Message{
+			{
+				Role: anthropic.MessageRoleUser,
+				Content: fmt.Sprintf("Summarize the following web content in markdown format:\n\n%s", content),
+			},
+		},
 	})
 	if err != nil {
 		return "", err
 	}
 
-	return resp.Completion, nil
+	return msg.Content[0].Text, nil
 }
 
 func saveToMarkdown(url string, content string) error {
