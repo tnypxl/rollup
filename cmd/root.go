@@ -131,8 +131,8 @@ func runRollup() error {
 	} else {
 		codeGenList = strings.Split(codeGenPatterns, ",")
 	}
-	if cfg != nil && len(cfg.Ignore) > 0 {
-		ignoreList = cfg.Ignore
+	if cfg != nil && cfg.IgnorePatterns != nil && len(cfg.IgnorePatterns) > 0 {
+		ignoreList = cfg.IgnorePatterns
 	} else {
 		ignoreList = strings.Split(ignorePatterns, ",")
 	}

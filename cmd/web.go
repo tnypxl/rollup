@@ -128,10 +128,11 @@ func extractAndConvertContent(urlStr string) (string, error) {
 	// Use the CSS locator from the config
 	cssLocator := cfg.Scrape.CSSLocator
 	if cssLocator != "" {
-		content, err = scraper.ExtractContentWithCSS(content, cssLocator)
-		if err != nil {
-			return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
-		}
+		// TODO: Implement content extraction with CSS selector
+		// content, err = scraper.ExtractContentWithCSS(content, cssLocator)
+		// if err != nil {
+		// 	return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
+		// }
 	}
 
 	// Create a new converter
