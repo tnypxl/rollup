@@ -8,12 +8,15 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/tnypxl/rollup/internal/config"
 )
 
 var (
 	path            string
 	fileTypes       string
 	codeGenPatterns string
+	configFile      string
+	cfg             *config.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -23,7 +26,21 @@ var rootCmd = &cobra.Command{
 in a given project, current path or a custom path, to a single timestamped markdown file
 whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runRollup(path, fileTypes, codeGenPatterns)
+		if configFile == "" {
+			defaultConfig := config.DefaultConfigPath()
+			if config.FileExists(defaultConfig) {
+				configFile = defaultConfig
+			}
+		}
+
+		if configFile != "" {
+			var err error
+			cfg, err = config.Load(configFile)
+			if err != nil {
+				return fmt.Errorf("error loading config file: %v", err)
+			}
+		}
+		return runRollup()
 	},
 }
 
@@ -34,7 +51,8 @@ func Execute() error {
 func init() {
 	rootCmd.Flags().StringVarP(&path, "path", "p", ".", "Path to the project directory")
 	rootCmd.Flags().StringVarP(&fileTypes, "types", "t", ".go,.md,.txt", "Comma-separated list of file extensions to include")
-	rootCmd.Flags().StringVarP(&codeGenPatterns, "codegen", "c", "", "Comma-separated list of glob patterns for code-generated files")
+	rootCmd.Flags().StringVarP(&codeGenPatterns, "codegen", "g", "", "Comma-separated list of glob patterns for code-generated files")
+	rootCmd.Flags().StringVarP(&configFile, "config", "f", "", "Path to the config file (default: rollup.yml in the current directory)")
 }
 
 func matchGlob(pattern, path string) bool {
@@ -82,10 +100,19 @@ func isCodeGenerated(filePath string, patterns []string) bool {
 	return false
 }
 
-func runRollup(path, fileTypes, codeGenPatterns string) error {
-	// Convert file types and code-generated patterns to slices
-	types := strings.Split(fileTypes, ",")
-	codeGenList := strings.Split(codeGenPatterns, ",")
+func runRollup() error {
+	// Use config if available, otherwise use command-line flags
+	var types, codeGenList []string
+	if cfg != nil && len(cfg.FileTypes) > 0 {
+		types = cfg.FileTypes
+	} else {
+		types = strings.Split(fileTypes, ",")
+	}
+	if cfg != nil && len(cfg.CodeGenerated) > 0 {
+		codeGenList = cfg.CodeGenerated
+	} else {
+		codeGenList = strings.Split(codeGenPatterns, ",")
+	}
 
 	// Get the absolute path
 	absPath, err := filepath.Abs(path)
@@ -120,7 +147,7 @@ func runRollup(path, fileTypes, codeGenPatterns string) error {
 		}
 		ext := filepath.Ext(path)
 		for _, t := range types {
-			if ext == t {
+			if ext == "."+t {
 				// Read file contents
 				content, err := os.ReadFile(path)
 				if err != nil {
@@ -137,7 +164,7 @@ func runRollup(path, fileTypes, codeGenPatterns string) error {
 				}
 
 				// Write file name and contents to the output file
-				fmt.Fprintf(outputFile, "# File: %s%s\n\n```%s\n%s```\n\n", relPath, codeGenNote, ext[1:], string(content))
+				fmt.Fprintf(outputFile, "# File: %s%s\n\n```%s\n%s```\n\n", relPath, codeGenNote, t, string(content))
 				break
 			}
 		}
