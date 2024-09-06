@@ -15,6 +15,7 @@ var (
 	path            string
 	fileTypes       string
 	codeGenPatterns string
+	ignorePatterns  string
 	configFile      string
 	cfg             *config.Config
 )
@@ -52,6 +53,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&path, "path", "p", ".", "Path to the project directory")
 	rootCmd.Flags().StringVarP(&fileTypes, "types", "t", ".go,.md,.txt", "Comma-separated list of file extensions to include")
 	rootCmd.Flags().StringVarP(&codeGenPatterns, "codegen", "g", "", "Comma-separated list of glob patterns for code-generated files")
+	rootCmd.Flags().StringVarP(&ignorePatterns, "ignore", "i", "", "Comma-separated list of glob patterns for files to ignore")
 	rootCmd.Flags().StringVarP(&configFile, "config", "f", "", "Path to the config file (default: rollup.yml in the current directory)")
 }
 
@@ -100,9 +102,25 @@ func isCodeGenerated(filePath string, patterns []string) bool {
 	return false
 }
 
+func isIgnored(filePath string, patterns []string) bool {
+	for _, pattern := range patterns {
+		if strings.Contains(pattern, "**") {
+			if matchGlob(pattern, filePath) {
+				return true
+			}
+		} else {
+			matched, err := filepath.Match(pattern, filepath.Base(filePath))
+			if err == nil && matched {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func runRollup() error {
 	// Use config if available, otherwise use command-line flags
-	var types, codeGenList []string
+	var types, codeGenList, ignoreList []string
 	if cfg != nil && len(cfg.FileTypes) > 0 {
 		types = cfg.FileTypes
 	} else {
@@ -112,6 +130,11 @@ func runRollup() error {
 		codeGenList = cfg.CodeGenerated
 	} else {
 		codeGenList = strings.Split(codeGenPatterns, ",")
+	}
+	if cfg != nil && len(cfg.Ignore) > 0 {
+		ignoreList = cfg.Ignore
+	} else {
+		ignoreList = strings.Split(ignorePatterns, ",")
 	}
 
 	// Get the absolute path
@@ -145,6 +168,13 @@ func runRollup() error {
 			}
 			return nil
 		}
+		relPath, _ := filepath.Rel(absPath, path)
+		
+		// Check if the file should be ignored
+		if isIgnored(relPath, ignoreList) {
+			return nil
+		}
+		
 		ext := filepath.Ext(path)
 		for _, t := range types {
 			if ext == "."+t {
@@ -156,7 +186,6 @@ func runRollup() error {
 				}
 
 				// Check if the file is code-generated
-				relPath, _ := filepath.Rel(absPath, path)
 				isCodeGen := isCodeGenerated(relPath, codeGenList)
 				codeGenNote := ""
 				if isCodeGen {
