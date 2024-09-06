@@ -19,3 +19,6 @@ go.work
 
 # Ignore rollup output files
 *rollup*.md
+
+# Ignore rollup config file
+rollup.yml
