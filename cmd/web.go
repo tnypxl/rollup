@@ -16,7 +16,6 @@ import (
 var (
 	urls       []string
 	outputFile string
-	cfg        *config.Config
 )
 
 var webCmd = &cobra.Command{
