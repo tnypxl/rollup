@@ -271,36 +271,7 @@ func ExtractContentWithCSS(content, selector string) (string, error) {
 	return selectedContent, nil
 }
 
-// ExtractContentWithXPath extracts content from HTML using an XPath selector
-func ExtractContentWithXPath(content, xpath string) (string, error) {
-	log.Printf("Extracting content with XPath selector: %s\n", xpath)
-	
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
-	if err != nil {
-		return "", fmt.Errorf("error parsing HTML: %v", err)
-	}
-
-	includeXPath, _ := parseSelectors(xpath)
-
-	var selectedContent string
-	doc.Find("body").Each(func(i int, s *goquery.Selection) {
-		if content, err := s.Html(); err == nil {
-			selectedContent = content
-		}
-	})
-
-	if selectedContent == "" {
-		return "", fmt.Errorf("no content found with XPath selector: %s", includeXPath)
-	}
-
-	// Note: XPath exclusion is not implemented here as goquery doesn't support XPath.
-	// You may need to use a different library for XPath support.
-
-	log.Printf("Extracted content length: %d\n", len(selectedContent))
-	return selectedContent, nil
-}
-
-// parseSelectors splits the selector string into include and exclude parts
+// parseSelectors splits the CSS selector string into include and exclude parts
 func parseSelectors(selector string) (string, []string) {
 	parts := strings.Split(selector, "!")
 	includeSelector := strings.TrimSpace(parts[0])
