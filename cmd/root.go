@@ -45,7 +45,8 @@ whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 	},
 }
 
-func Execute() error {
+func Execute(config *config.Config, scraperConfig scraper.Config) error {
+	cfg = config
 	return rootCmd.Execute()
 }
 
