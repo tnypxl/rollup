@@ -273,7 +273,7 @@ func ExtractContentWithCSS(content, selector string) (string, error) {
 
 // parseSelectors splits the CSS selector string into include and exclude parts
 func parseSelectors(selector string) (string, []string) {
-	parts := strings.Split(selector, "!")
+	parts := strings.Split(selector, "-")
 	includeSelector := strings.TrimSpace(parts[0])
 	var excludeSelectors []string
 	for _, part := range parts[1:] {
