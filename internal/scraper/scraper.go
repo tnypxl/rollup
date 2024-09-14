@@ -280,7 +280,7 @@ func ExtractContentWithXPath(content, xpath string) (string, error) {
 		return "", fmt.Errorf("error parsing HTML: %v", err)
 	}
 
-	includeXPath, excludeXPaths := parseSelectors(xpath)
+	includeXPath, _ := parseSelectors(xpath)
 
 	var selectedContent string
 	doc.Find("body").Each(func(i int, s *goquery.Selection) {
