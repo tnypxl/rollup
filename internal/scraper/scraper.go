@@ -65,14 +65,6 @@ func FetchWebpageContent(urlStr string) (string, error) {
 	}
 	defer page.Close()
 
-	err = page.EmulateMedia(playwright.PageEmulateMediaOptions{
-		Media: playwright.MediaPrint,
-	})
-	if err != nil {
-		log.Printf("Error emulating print media: %v\n", err)
-		return "", fmt.Errorf("could not emulate print media: %v", err)
-	}
-
 	time.Sleep(time.Duration(rand.Intn(2000)+1000) * time.Millisecond)
 
 	log.Printf("Navigating to URL: %s\n", urlStr)
@@ -250,12 +242,14 @@ func ExtractContentWithCSS(content, selector string) (string, error) {
 		return "", fmt.Errorf("error parsing HTML: %v", err)
 	}
 
-	selectedContent, err := doc.Find(selector).Html()
+	selection := doc.Find(selector)
+	if selection.Length() == 0 {
+		return "", fmt.Errorf("no content found with CSS selector: %s", selector)
+	}
+
+	selectedContent, err := selection.Html()
 	if err != nil {
 		return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
-	}
-	if selectedContent == "" {
-		return "", fmt.Errorf("no content found with CSS selector: %s", selector)
 	}
 
 	log.Printf("Extracted content length: %d\n", len(selectedContent))
