@@ -250,7 +250,10 @@ func ExtractContentWithCSS(content, selector string) (string, error) {
 		return "", fmt.Errorf("error parsing HTML: %v", err)
 	}
 
-	selectedContent := doc.Find(selector).Html()
+	selectedContent, err := doc.Find(selector).Html()
+	if err != nil {
+		return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
+	}
 	if selectedContent == "" {
 		return "", fmt.Errorf("no content found with CSS selector: %s", selector)
 	}
