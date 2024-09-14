@@ -277,7 +277,7 @@ func parseSelectors(selector string) (string, []string) {
 	includeSelector := strings.TrimSpace(parts[0])
 	var excludeSelectors []string
 	for _, part := range parts[1:] {
-		excludeSelectors = append(excludeSelectors, strings.TrimSpace(part))
+		excludeSelectors = append(excludeSelectors, strings.TrimPrefix(part, " "))
 	}
 	return includeSelector, excludeSelectors
 }
