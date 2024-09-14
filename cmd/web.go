@@ -16,7 +16,6 @@ var (
 	outputFile    string
 	depth         int
 	cssSelector   string
-	xpathSelector string
 )
 
 var scraperConfig scraper.Config
@@ -34,7 +33,6 @@ func init() {
 	webCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output Markdown file (default: rollup-web-<timestamp>.md)")
 	webCmd.Flags().IntVarP(&depth, "depth", "d", 0, "Depth of link traversal (default: 0, only scrape the given URLs)")
 	webCmd.Flags().StringVar(&cssSelector, "css", "", "CSS selector to extract specific content")
-	webCmd.Flags().StringVar(&xpathSelector, "xpath", "", "XPath selector to extract specific content")
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
