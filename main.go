@@ -26,7 +26,11 @@ func main() {
 	}
 	defer scraper.ClosePlaywright()
 
-	if err := cmd.Execute(); err != nil {
+	scraperConfig := scraper.Config{
+		CSSLocator: cfg.Scrape.CSSLocator,
+	}
+
+	if err := cmd.Execute(cfg, scraperConfig); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

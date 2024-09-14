@@ -20,6 +20,11 @@ var (
 	xpathSelector string
 )
 
+var (
+	cfg           *config.Config
+	scraperConfig scraper.Config
+)
+
 var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "Scrape main content from webpages and convert to Markdown",
@@ -37,15 +42,6 @@ func init() {
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
-	var err error
-	cfg, err = config.Load("rollup.yml")
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("rollup.yml file not found. Please create a configuration file or provide command-line arguments")
-		}
-		return fmt.Errorf("error loading configuration: %v", err)
-	}
-
 	// Use config if available, otherwise use command-line flags
 	if len(urls) == 0 && cfg.Scrape.URL != "" {
 		urls = []string{cfg.Scrape.URL}
@@ -135,8 +131,8 @@ func extractAndConvertContent(urlStr string) (string, error) {
 		return "", fmt.Errorf("error fetching webpage content: %v", err)
 	}
 
-	if cssSelector != "" {
-		content, err = scraper.ExtractContentWithCSS(content, cssSelector)
+	if scraperConfig.CSSLocator != "" {
+		content, err = scraper.ExtractContentWithCSS(content, scraperConfig.CSSLocator)
 		if err != nil {
 			return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
 		}
