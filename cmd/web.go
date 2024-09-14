@@ -33,7 +33,7 @@ func init() {
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
 	webCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output Markdown file (default: rollup-web-<timestamp>.md)")
 	webCmd.Flags().IntVarP(&depth, "depth", "d", 0, "Depth of link traversal (default: 0, only scrape the given URLs)")
-	webCmd.Flags().StringVar(&includeSelector, "include", "", "CSS selector to extract specific content")
+	webCmd.Flags().StringVar(&includeSelector, "css", "", "CSS selector to extract specific content")
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
 
