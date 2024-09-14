@@ -207,3 +207,78 @@ func scrollPage(page playwright.Page) error {
 	log.Println("Page scroll completed")
 	return nil
 }
+
+// ExtractLinks extracts all links from the given URL
+func ExtractLinks(urlStr string) ([]string, error) {
+	log.Printf("Extracting links from URL: %s\n", urlStr)
+	
+	page, err := browser.NewPage()
+	if err != nil {
+		return nil, fmt.Errorf("could not create page: %v", err)
+	}
+	defer page.Close()
+
+	if _, err = page.Goto(urlStr, playwright.PageGotoOptions{
+		WaitUntil: playwright.WaitUntilStateNetworkidle,
+	}); err != nil {
+		return nil, fmt.Errorf("could not go to page: %v", err)
+	}
+
+	links, err := page.Evaluate(`() => {
+		const anchors = document.querySelectorAll('a');
+		return Array.from(anchors).map(a => a.href);
+	}`)
+	if err != nil {
+		return nil, fmt.Errorf("could not extract links: %v", err)
+	}
+
+	var result []string
+	for _, link := range links.([]interface{}) {
+		result = append(result, link.(string))
+	}
+
+	log.Printf("Extracted %d links\n", len(result))
+	return result, nil
+}
+
+// ExtractContentWithCSS extracts content from HTML using a CSS selector
+func ExtractContentWithCSS(content, selector string) (string, error) {
+	log.Printf("Extracting content with CSS selector: %s\n", selector)
+	
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
+	if err != nil {
+		return "", fmt.Errorf("error parsing HTML: %v", err)
+	}
+
+	selectedContent := doc.Find(selector).Html()
+	if selectedContent == "" {
+		return "", fmt.Errorf("no content found with CSS selector: %s", selector)
+	}
+
+	log.Printf("Extracted content length: %d\n", len(selectedContent))
+	return selectedContent, nil
+}
+
+// ExtractContentWithXPath extracts content from HTML using an XPath selector
+func ExtractContentWithXPath(content, xpath string) (string, error) {
+	log.Printf("Extracting content with XPath selector: %s\n", xpath)
+	
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
+	if err != nil {
+		return "", fmt.Errorf("error parsing HTML: %v", err)
+	}
+
+	var selectedContent string
+	doc.Find("body").Each(func(i int, s *goquery.Selection) {
+		if content, err := s.Html(); err == nil {
+			selectedContent = content
+		}
+	})
+
+	if selectedContent == "" {
+		return "", fmt.Errorf("no content found with XPath selector: %s", xpath)
+	}
+
+	log.Printf("Extracted content length: %d\n", len(selectedContent))
+	return selectedContent, nil
+}
