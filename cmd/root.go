@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tnypxl/rollup/internal/config"
+	"github.com/tnypxl/rollup/internal/scraper"
 )
 
 var (
