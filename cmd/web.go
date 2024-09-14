@@ -20,10 +20,7 @@ var (
 	xpathSelector string
 )
 
-var (
-	cfg           *config.Config
-	scraperConfig scraper.Config
-)
+var scraperConfig scraper.Config
 
 var webCmd = &cobra.Command{
 	Use:   "web",
