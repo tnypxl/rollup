@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/spf13/cobra"
