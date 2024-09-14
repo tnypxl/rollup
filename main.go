@@ -26,7 +26,7 @@ func main() {
 	}
 	defer scraper.ClosePlaywright()
 
-	if err := cmd.Execute(cfg); err != nil {
+	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
