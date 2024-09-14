@@ -88,13 +88,44 @@ func runWeb(cmd *cobra.Command, args []string) error {
 }
 
 func generateDefaultFilename(urls []string) string {
-	// Simple implementation for now
-	return "rollup-web-content.md"
+	timestamp := time.Now().Format("20060102-150405")
+	return fmt.Sprintf("rollup-web-%s.md", timestamp)
 }
 
-func scrapeRecursively(url string, depth int) (string, error) {
-	// Simple implementation for now
-	return extractAndConvertContent(url)
+func scrapeRecursively(urlStr string, depth int) (string, error) {
+	visited := make(map[string]bool)
+	return scrapeURL(urlStr, depth, visited)
+}
+
+func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error) {
+	if depth < 0 || visited[urlStr] {
+		return "", nil
+	}
+
+	visited[urlStr] = true
+
+	content, err := extractAndConvertContent(urlStr)
+	if err != nil {
+		return "", err
+	}
+
+	if depth > 0 {
+		links, err := scraper.ExtractLinks(urlStr)
+		if err != nil {
+			return content, fmt.Errorf("error extracting links: %v", err)
+		}
+
+		for _, link := range links {
+			subContent, err := scrapeURL(link, depth-1, visited)
+			if err != nil {
+				fmt.Printf("Warning: Error scraping %s: %v\n", link, err)
+				continue
+			}
+			content += "\n\n---\n\n" + subContent
+		}
+	}
+
+	return content, nil
 }
 
 func extractAndConvertContent(urlStr string) (string, error) {
@@ -103,10 +134,16 @@ func extractAndConvertContent(urlStr string) (string, error) {
 		return "", fmt.Errorf("error fetching webpage content: %v", err)
 	}
 
-	if cssSelector != "" || xpathSelector != "" {
-		// TODO: Implement content extraction with CSS or XPath selector
-		// For now, we'll just use the full content
-		fmt.Println("Warning: CSS and XPath selectors are not yet implemented")
+	if cssSelector != "" {
+		content, err = scraper.ExtractContentWithCSS(content, cssSelector)
+		if err != nil {
+			return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
+		}
+	} else if xpathSelector != "" {
+		content, err = scraper.ExtractContentWithXPath(content, xpathSelector)
+		if err != nil {
+			return "", fmt.Errorf("error extracting content with XPath selector: %v", err)
+		}
 	}
 
 	// Create a new converter
