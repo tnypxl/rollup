@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	urls          []string
-	outputFile    string
-	depth         int
-	cssSelector   string
+	urls           []string
+	outputFile     string
+	depth          int
+	includeSelector string
+	excludeSelectors []string
 )
 
 var scraperConfig scraper.Config
@@ -32,7 +33,8 @@ func init() {
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
 	webCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output Markdown file (default: rollup-web-<timestamp>.md)")
 	webCmd.Flags().IntVarP(&depth, "depth", "d", 0, "Depth of link traversal (default: 0, only scrape the given URLs)")
-	webCmd.Flags().StringVar(&cssSelector, "css", "", "CSS selector to extract specific content (use '-' to exclude elements, e.g., 'main - .ads - .navigation')")
+	webCmd.Flags().StringVar(&includeSelector, "include", "", "CSS selector to extract specific content")
+	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
@@ -125,8 +127,12 @@ func extractAndConvertContent(urlStr string) (string, error) {
 		return "", fmt.Errorf("error fetching webpage content: %v", err)
 	}
 
-	// The content is already extracted using the main element,
-	// so we don't need to use ExtractContentWithCSS or ExtractContentWithXPath here
+	if includeSelector != "" {
+		content, err = scraper.ExtractContentWithCSS(content, includeSelector, excludeSelectors)
+		if err != nil {
+			return "", fmt.Errorf("error extracting content with CSS: %v", err)
+		}
+	}
 
 	// Create a new converter
 	converter := md.NewConverter("", true, nil)

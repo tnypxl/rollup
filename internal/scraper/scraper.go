@@ -243,15 +243,13 @@ func ExtractLinks(urlStr string) ([]string, error) {
 }
 
 // ExtractContentWithCSS extracts content from HTML using a CSS selector
-func ExtractContentWithCSS(content, selector string) (string, error) {
-	log.Printf("Extracting content with CSS selector: %s\n", selector)
+func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []string) (string, error) {
+	log.Printf("Extracting content with CSS selector: %s\n", includeSelector)
 	
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {
 		return "", fmt.Errorf("error parsing HTML: %v", err)
 	}
-
-	includeSelector, excludeSelectors := parseSelectors(selector)
 
 	selection := doc.Find(includeSelector)
 	if selection.Length() == 0 {
@@ -269,15 +267,4 @@ func ExtractContentWithCSS(content, selector string) (string, error) {
 
 	log.Printf("Extracted content length: %d\n", len(selectedContent))
 	return selectedContent, nil
-}
-
-// parseSelectors splits the CSS selector string into include and exclude parts
-func parseSelectors(selector string) (string, []string) {
-	parts := strings.Split(selector, "-")
-	includeSelector := strings.TrimSpace(parts[0])
-	var excludeSelectors []string
-	for _, part := range parts[1:] {
-		excludeSelectors = append(excludeSelectors, strings.TrimPrefix(part, " "))
-	}
-	return includeSelector, excludeSelectors
 }
