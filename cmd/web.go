@@ -1,24 +1,25 @@
 package cmd
 
-// TODO: Implement web scraping (DO NOT EDIT)
+import (
+	"fmt"
+	"net/url"
+	"os"
+	"strings"
+	"time"
 
-// import (
-// 	"fmt"
-// 	"net/url"
-// 	"os"
-// 	"strings"
-// 	"time"
-//
-// 	"github.com/JohannesKaufmann/html-to-markdown"
-// 	"github.com/spf13/cobra"
-// 	"github.com/tnypxl/rollup/internal/config"
-// 	"github.com/tnypxl/rollup/internal/scraper"
-// )
-//
-// var (
-// 	urls       []string
-// 	outputFile string
-// )
+	"github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/spf13/cobra"
+	"github.com/tnypxl/rollup/internal/config"
+	"github.com/tnypxl/rollup/internal/scraper"
+)
+
+var (
+	urls       []string
+	outputFile string
+	depth      int
+	cssSelector string
+	xpathSelector string
+)
 //
 // var webCmd = &cobra.Command{
 // 	Use:   "web",
@@ -154,3 +155,33 @@ package cmd
 //
 // 	return header + markdown + "\n\n", nil
 // }
+func scrapeRecursively(urlStr string, currentDepth int) (string, error) {
+	if currentDepth < 0 {
+		return "", nil
+	}
+
+	content, err := extractAndConvertContent(urlStr)
+	if err != nil {
+		return "", err
+	}
+
+	if currentDepth == 0 {
+		return content, nil
+	}
+
+	links, err := scraper.ExtractLinks(urlStr)
+	if err != nil {
+		return content, err
+	}
+
+	for _, link := range links {
+		subContent, err := scrapeRecursively(link, currentDepth-1)
+		if err != nil {
+			fmt.Printf("Warning: Error scraping %s: %v\n", link, err)
+			continue
+		}
+		content += "\n\n---\n\n" + subContent
+	}
+
+	return content, nil
+}
