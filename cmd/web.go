@@ -127,17 +127,8 @@ func extractAndConvertContent(urlStr string) (string, error) {
 		return "", fmt.Errorf("error fetching webpage content: %v", err)
 	}
 
-	if scraperConfig.CSSLocator != "" {
-		content, err = scraper.ExtractContentWithCSS(content, scraperConfig.CSSLocator)
-		if err != nil {
-			return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
-		}
-	} else if xpathSelector != "" {
-		content, err = scraper.ExtractContentWithXPath(content, xpathSelector)
-		if err != nil {
-			return "", fmt.Errorf("error extracting content with XPath selector: %v", err)
-		}
-	}
+	// The content is already extracted using the main element,
+	// so we don't need to use ExtractContentWithCSS or ExtractContentWithXPath here
 
 	// Create a new converter
 	converter := md.NewConverter("", true, nil)

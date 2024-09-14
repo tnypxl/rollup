@@ -100,11 +100,20 @@ func FetchWebpageContent(urlStr string) (string, error) {
 		return "", fmt.Errorf("error waiting for body: %v", err)
 	}
 
-	log.Println("Getting page content")
-	content, err := page.Content()
+	log.Println("Getting main content")
+	content, err := page.InnerHTML("main")
 	if err != nil {
-		log.Printf("Error getting page content: %v\n", err)
-		return "", fmt.Errorf("could not get page content: %v", err)
+		log.Printf("Error getting main content: %v\n", err)
+		return "", fmt.Errorf("could not get main content: %v", err)
+	}
+
+	if content == "" {
+		log.Println("Main content is empty, falling back to body content")
+		content, err = page.InnerHTML("body")
+		if err != nil {
+			log.Printf("Error getting body content: %v\n", err)
+			return "", fmt.Errorf("could not get body content: %v", err)
+		}
 	}
 
 	log.Printf("Successfully fetched webpage content (length: %d)\n", len(content))
