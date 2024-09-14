@@ -253,7 +253,11 @@ func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []s
 
 	selection := doc.Find(includeSelector)
 	if selection.Length() == 0 {
-		return "", fmt.Errorf("no content found with CSS selector: %s", includeSelector)
+		log.Printf("Warning: No content found with CSS selector: %s. Falling back to body content.\n", includeSelector)
+		selection = doc.Find("body")
+		if selection.Length() == 0 {
+			return "", fmt.Errorf("no content found in body")
+		}
 	}
 
 	for _, excludeSelector := range excludeSelectors {
