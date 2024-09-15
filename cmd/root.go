@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tnypxl/rollup/internal/config"
-	"github.com/tnypxl/rollup/internal/scraper"
 )
 
 var (
@@ -173,12 +172,12 @@ func runRollup() error {
 			return nil
 		}
 		relPath, _ := filepath.Rel(absPath, path)
-		
+
 		// Check if the file should be ignored
 		if isIgnored(relPath, ignoreList) {
 			return nil
 		}
-		
+
 		ext := filepath.Ext(path)
 		for _, t := range types {
 			if ext == "."+t {
@@ -203,7 +202,6 @@ func runRollup() error {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return fmt.Errorf("error walking through directory: %v", err)
 	}
