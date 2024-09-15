@@ -212,7 +212,7 @@ func scrollPage(page playwright.Page) error {
 // ExtractLinks extracts all links from the given URL
 func ExtractLinks(urlStr string) ([]string, error) {
 	log.Printf("Extracting links from URL: %s\n", urlStr)
-	
+
 	page, err := browser.NewPage()
 	if err != nil {
 		return nil, fmt.Errorf("could not create page: %v", err)
@@ -245,7 +245,7 @@ func ExtractLinks(urlStr string) ([]string, error) {
 // ExtractContentWithCSS extracts content from HTML using a CSS selector
 func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []string) (string, error) {
 	log.Printf("Extracting content with CSS selector: %s\n", includeSelector)
-	
+
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {
 		return "", fmt.Errorf("error parsing HTML: %v", err)
