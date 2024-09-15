@@ -174,13 +174,9 @@ func extractAndConvertContent(urlStr string) (string, error) {
 		}
 	}
 
-	// Create a new converter
-	converter := md.NewConverter("", true, nil)
-
-	// Convert HTML to Markdown
-	markdown, err := converter.ConvertString(content)
+	markdown, err := scraper.ProcessHTMLContent(content, scraper.Config{})
 	if err != nil {
-		return "", fmt.Errorf("error converting HTML to Markdown: %v", err)
+		return "", fmt.Errorf("error processing HTML content: %v", err)
 	}
 
 	parsedURL, err := url.Parse(urlStr)

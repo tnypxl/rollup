@@ -11,7 +11,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/playwright-community/playwright-go"
-	"github.com/russross/blackfriday/v2"
+	md "github.com/JohannesKaufmann/html-to-markdown"
 )
 
 var logger *log.Logger
@@ -231,16 +231,18 @@ func ProcessHTMLContent(htmlContent string, config Config) (string, error) {
 		return "", fmt.Errorf("error extracting content: %v", err)
 	}
 
-	markdown := convertToMarkdown(content)
+	// Create a new converter
+	converter := md.NewConverter("", true, nil)
+
+	// Convert HTML to Markdown
+	markdown, err := converter.ConvertString(content)
+	if err != nil {
+		log.Printf("Error converting HTML to Markdown: %v\n", err)
+		return "", fmt.Errorf("error converting HTML to Markdown: %v", err)
+	}
+
 	log.Printf("Converted HTML to Markdown (length: %d)\n", len(markdown))
 	return markdown, nil
-}
-
-func convertToMarkdown(html string) string {
-	// Use a simple HTML-to-Markdown conversion
-	markdown := blackfriday.Run([]byte(html),
-		blackfriday.WithExtensions(blackfriday.CommonExtensions|blackfriday.HardLineBreak))
-	return string(markdown)
 }
 
 func scrollPage(page playwright.Page) error {
