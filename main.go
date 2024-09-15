@@ -20,6 +20,9 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// Initialize the scraper logger with default verbosity (false)
+	scraper.SetupLogger(false)
+
 	err = scraper.InitPlaywright()
 	if err != nil {
 		log.Fatalf("Failed to initialize Playwright: %v", err)
@@ -28,6 +31,7 @@ func main() {
 
 	scraperConfig := scraper.Config{
 		CSSLocator: cfg.Scrape.CSSLocator,
+		Verbose:    false, // Set default verbosity
 	}
 
 	if err := cmd.Execute(cfg, scraperConfig); err != nil {
