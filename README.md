@@ -64,23 +64,26 @@ scrape:
 ## Examples
 
 1. Basic usage with default configuration:
+
    ```bash
    rollup
    ```
 
 2. Use specific file types and enable verbose logging:
+
    ```bash
    rollup --file-types=.go,.js,.py --verbose
    ```
 
 3. Use a custom configuration file:
+
    ```bash
    rollup --config=my-config.yml
    ```
 
 4. Web scraping with content exclusion:
    ```bash
-   rollup --url=https://example.com --css=.main-content --exclude-css=.ads,.sidebar
+   rollup web --url=https://example.com --css=.main-content --exclude-css=.ads,.sidebar
    ```
 
 ## Contributing
