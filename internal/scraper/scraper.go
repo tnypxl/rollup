@@ -129,21 +129,27 @@ func ProcessHTMLContent(htmlContent string, config Config) (string, error) {
 		return "", fmt.Errorf("error parsing HTML: %v", err)
 	}
 
-	var content string
+	var selection *goquery.Selection
 	if config.CSSLocator != "" {
 		log.Printf("Using CSS locator: %s\n", config.CSSLocator)
-		content, err = doc.Find(config.CSSLocator).Html()
-		if err != nil {
-			log.Printf("Error extracting content with CSS locator: %v\n", err)
-			return "", fmt.Errorf("error extracting content with CSS locator: %v", err)
+		selection = doc.Find(config.CSSLocator)
+		if selection.Length() == 0 {
+			log.Printf("Warning: No content found with CSS locator: %s. Falling back to body content.\n", config.CSSLocator)
+			selection = doc.Find("body")
 		}
 	} else {
 		log.Println("No CSS locator provided, processing entire body")
-		content, err = doc.Find("body").Html()
-		if err != nil {
-			log.Printf("Error extracting body content: %v\n", err)
-			return "", fmt.Errorf("error extracting body content: %v", err)
-		}
+		selection = doc.Find("body")
+	}
+
+	if selection.Length() == 0 {
+		return "", fmt.Errorf("no content found in the document")
+	}
+
+	content, err := selection.Html()
+	if err != nil {
+		log.Printf("Error extracting content: %v\n", err)
+		return "", fmt.Errorf("error extracting content: %v", err)
 	}
 
 	markdown := convertToMarkdown(content)
