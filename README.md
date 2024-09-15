@@ -1,14 +1,15 @@
 # Rollup
 
-Rollup is a powerful CLI tool designed to aggregate and process files based on specified criteria. It's particularly useful for developers and system administrators who need to collect and summarize information from multiple files across a project or system.
+Rollup is a powerful CLI tool designed to aggregate and process files based on specified criteria. It's particularly useful for developers and system administrators who need to collect and summarize information from multiple files across a project or system. It now includes advanced web scraping capabilities.
 
 ## Features
 
 - File type filtering
 - Ignore patterns for excluding files
 - Support for code-generated file detection
-- Optional web scraping functionality
+- Advanced web scraping functionality
 - Verbose logging option for detailed output
+- Exclusionary CSS paths for web scraping
 
 ## Installation
 
@@ -33,6 +34,9 @@ rollup [flags]
 - `--code-generated`: Comma-separated list of patterns for code-generated files
 - `--verbose, -v`: Enable verbose logging
 - `--config`: Path to the configuration file (default: rollup.yml)
+- `--url`: URL to scrape (for web scraping functionality)
+- `--css`: CSS selector for content extraction (for web scraping)
+- `--exclude-css`: CSS selector for content to exclude (for web scraping)
 
 ## Configuration
 
@@ -52,6 +56,9 @@ code_generated:
 scrape:
   url: https://example.com
   css_locator: .content
+  exclude_selectors:
+    - .ads
+    - .navigation
 ```
 
 ## Examples
@@ -69,6 +76,11 @@ scrape:
 3. Use a custom configuration file:
    ```bash
    rollup --config=my-config.yml
+   ```
+
+4. Web scraping with content exclusion:
+   ```bash
+   rollup --url=https://example.com --css=.main-content --exclude-css=.ads,.sidebar
    ```
 
 ## Contributing
