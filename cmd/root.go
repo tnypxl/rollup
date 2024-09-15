@@ -28,7 +28,7 @@ var rootCmd = &cobra.Command{
 	Long: `Rollup is a tool that writes the contents of all files (with target custom file types provided)
 in a given project, current path or a custom path, to a single timestamped markdown file
 whose name is <project-directory-name>-rollup-<timestamp>.md.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if configFile == "" {
 			defaultConfig := config.DefaultConfigPath()
 			if config.FileExists(defaultConfig) {
@@ -47,10 +47,8 @@ whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 	},
 }
 
-func Execute(config *config.Config, scraperConfig scraper.Config) error {
+func Execute(config *config.Config) error {
 	cfg = config
-	scraper.SetupLogger(verbose)
-	scraperConfig.Verbose = verbose
 	return rootCmd.Execute()
 }
 

@@ -31,6 +31,8 @@ var webCmd = &cobra.Command{
 	RunE:  runWeb,
 }
 
+var scraperConfig scraper.Config
+
 func init() {
 	rootCmd.AddCommand(webCmd)
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
@@ -39,6 +41,9 @@ func init() {
 	webCmd.Flags().StringVar(&includeSelector, "css", "", "CSS selector to extract specific content")
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
+
+func runWeb(cmd *cobra.Command, args []string) error {
+	scraperConfig.Verbose = verbose
 
 func runWeb(cmd *cobra.Command, args []string) error {
 	// Use config if available, otherwise use command-line flags

@@ -29,13 +29,7 @@ func main() {
 	}
 	defer scraper.ClosePlaywright()
 
-	scraperConfig := scraper.Config{
-		URLs:       []scraper.URLConfig{{URL: cfg.Scrape.URLs[0].URL}},
-		OutputType: cfg.Scrape.OutputType,
-		Verbose:    false, // Set default verbosity
-	}
-
-	if err := cmd.Execute(cfg, scraperConfig); err != nil {
+	if err := cmd.Execute(cfg); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
