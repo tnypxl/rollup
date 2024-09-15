@@ -67,7 +67,7 @@ func scrapeURL(config URLConfig) (string, error) {
 	}
 
 	if config.CSSLocator != "" {
-		content, err = ExtractContentWithCSS(content, config.CSSLocator, nil)
+		content, err = ExtractContentWithCSS(content, config.CSSLocator, config.ExcludeSelectors)
 		if err != nil {
 			return "", err
 		}
@@ -97,9 +97,10 @@ func sanitizeFilename(name string) string {
 
 // URLConfig holds configuration for a single URL
 type URLConfig struct {
-	URL         string
-	CSSLocator  string
-	OutputAlias string
+	URL              string
+	CSSLocator       string
+	ExcludeSelectors []string
+	OutputAlias      string
 }
 
 // SetupLogger initializes the logger based on the verbose flag

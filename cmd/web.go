@@ -47,9 +47,10 @@ func runWeb(cmd *cobra.Command, args []string) error {
 		urlConfigs = make([]scraper.URLConfig, len(cfg.Scrape.URLs))
 		for i, u := range cfg.Scrape.URLs {
 			urlConfigs[i] = scraper.URLConfig{
-				URL:         u.URL,
-				CSSLocator:  u.CSSLocator,
-				OutputAlias: u.OutputAlias,
+				URL:              u.URL,
+				CSSLocator:       u.CSSLocator,
+				ExcludeSelectors: u.ExcludeSelectors,
+				OutputAlias:      u.OutputAlias,
 			}
 		}
 	} else {
