@@ -19,6 +19,7 @@ var (
 	ignorePatterns  string
 	configFile      string
 	cfg             *config.Config
+	verbose         bool
 )
 
 var rootCmd = &cobra.Command{
@@ -48,6 +49,8 @@ whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 
 func Execute(config *config.Config, scraperConfig scraper.Config) error {
 	cfg = config
+	scraper.SetupLogger(verbose)
+	scraperConfig.Verbose = verbose
 	return rootCmd.Execute()
 }
 
@@ -57,6 +60,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&codeGenPatterns, "codegen", "g", "", "Comma-separated list of glob patterns for code-generated files")
 	rootCmd.Flags().StringVarP(&ignorePatterns, "ignore", "i", "", "Comma-separated list of glob patterns for files to ignore")
 	rootCmd.Flags().StringVarP(&configFile, "config", "f", "", "Path to the config file (default: rollup.yml in the current directory)")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 }
 
 func matchGlob(pattern, path string) bool {

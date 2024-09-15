@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/russross/blackfriday/v2"
 )
 
+var logger *log.Logger
+
 var (
 	pw      *playwright.Playwright
 	browser playwright.Browser
@@ -20,11 +23,21 @@ var (
 // Config holds the scraper configuration
 type Config struct {
 	CSSLocator string
+	Verbose    bool
+}
+
+// SetupLogger initializes the logger based on the verbose flag
+func SetupLogger(verbose bool) {
+	if verbose {
+		logger = log.New(log.Writer(), "SCRAPER: ", log.LstdFlags)
+	} else {
+		logger = log.New(ioutil.Discard, "", 0)
+	}
 }
 
 // InitPlaywright initializes Playwright and launches the browser
 func InitPlaywright() error {
-	log.Println("Initializing Playwright")
+	logger.Println("Initializing Playwright")
 	var err error
 	pw, err = playwright.Run()
 	if err != nil {
@@ -40,7 +53,7 @@ func InitPlaywright() error {
 		return fmt.Errorf("could not launch browser: %v", err)
 	}
 
-	log.Println("Playwright initialized successfully")
+	logger.Println("Playwright initialized successfully")
 	return nil
 }
 
