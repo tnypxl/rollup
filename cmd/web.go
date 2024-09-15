@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/spf13/cobra"
 	"github.com/tnypxl/rollup/internal/scraper"
 )
