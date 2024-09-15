@@ -30,7 +30,8 @@ func main() {
 	defer scraper.ClosePlaywright()
 
 	scraperConfig := scraper.Config{
-		CSSLocator: cfg.Scrape.CSSLocator,
+		URLs:       []scraper.URLConfig{{URL: cfg.Scrape.URLs[0].URL}},
+		OutputType: cfg.Scrape.OutputType,
 		Verbose:    false, // Set default verbosity
 	}
 

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"regexp"
 	"strings"
 	"time"
 
@@ -218,17 +219,7 @@ func ProcessHTMLContent(htmlContent string, config Config) (string, error) {
 	}
 
 	selection := doc.Find("body")
-	if config.CSSLocator != "" {
-		log.Printf("Using CSS locator: %s\n", config.CSSLocator)
-		tempSelection := doc.Find(config.CSSLocator)
-		if tempSelection.Length() > 0 {
-			selection = tempSelection
-		} else {
-			log.Printf("Warning: No content found with CSS locator: %s. Falling back to body content.\n", config.CSSLocator)
-		}
-	} else {
-		log.Println("No CSS locator provided, processing entire body")
-	}
+	log.Println("Processing entire body")
 
 	if selection.Length() == 0 {
 		return "", fmt.Errorf("no content found in the document")
