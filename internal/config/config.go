@@ -15,8 +15,14 @@ type Config struct {
 }
 
 type ScrapeConfig struct {
-	URL        string `yaml:"url"`
-	CSSLocator string `yaml:"css_locator"`
+	URLs       []URLConfig `yaml:"urls"`
+	OutputType string      `yaml:"output_type"`
+}
+
+type URLConfig struct {
+	URL         string `yaml:"url"`
+	CSSLocator  string `yaml:"css_locator"`
+	OutputAlias string `yaml:"output_alias"`
 }
 
 func Load(configPath string) (*Config, error) {

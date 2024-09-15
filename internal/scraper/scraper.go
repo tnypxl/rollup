@@ -22,8 +22,83 @@ var (
 
 // Config holds the scraper configuration
 type Config struct {
-	CSSLocator string
+	URLs       []URLConfig
+	OutputType string
 	Verbose    bool
+}
+
+// ScrapeMultipleURLs scrapes multiple URLs concurrently
+func ScrapeMultipleURLs(config Config) (map[string]string, error) {
+	results := make(chan struct {
+		url     string
+		content string
+		err     error
+	}, len(config.URLs))
+
+	for _, urlConfig := range config.URLs {
+		go func(cfg URLConfig) {
+			content, err := scrapeURL(cfg)
+			results <- struct {
+				url     string
+				content string
+				err     error
+			}{cfg.URL, content, err}
+		}(urlConfig)
+	}
+
+	scrapedContent := make(map[string]string)
+	for i := 0; i < len(config.URLs); i++ {
+		result := <-results
+		if result.err != nil {
+			logger.Printf("Error scraping %s: %v\n", result.url, result.err)
+			continue
+		}
+		scrapedContent[result.url] = result.content
+	}
+
+	return scrapedContent, nil
+}
+
+func scrapeURL(config URLConfig) (string, error) {
+	content, err := FetchWebpageContent(config.URL)
+	if err != nil {
+		return "", err
+	}
+
+	if config.CSSLocator != "" {
+		content, err = ExtractContentWithCSS(content, config.CSSLocator, nil)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return ProcessHTMLContent(content, Config{})
+}
+
+func getFilenameFromContent(content, url string) string {
+	// Try to extract title from content
+	titleStart := strings.Index(content, "<title>")
+	titleEnd := strings.Index(content, "</title>")
+	if titleStart != -1 && titleEnd != -1 && titleEnd > titleStart {
+		title := content[titleStart+7 : titleEnd]
+		return sanitizeFilename(title) + ".md"
+	}
+
+	// If no title found, use the URL
+	return sanitizeFilename(url) + ".md"
+}
+
+func sanitizeFilename(name string) string {
+	// Remove any character that isn't alphanumeric, dash, or underscore
+	reg, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
+	return reg.ReplaceAllString(name, "_")
+}
+
+// URLConfig holds configuration for a single URL
+type URLConfig struct {
+	URL         string
+	CSSLocator  string
+	OutputAlias string
 }
 
 // SetupLogger initializes the logger based on the verbose flag

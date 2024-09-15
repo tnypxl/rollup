@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	urls           []string
-	outputFile     string
-	depth          int
+	urls            []string
+	outputType      string
+	depth           int
 	includeSelector string
 	excludeSelectors []string
 )
@@ -31,7 +31,7 @@ var webCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(webCmd)
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
-	webCmd.Flags().StringVarP(&outputFile, "output", "o", "", "Output Markdown file (default: rollup-web-<timestamp>.md)")
+	webCmd.Flags().StringVarP(&outputType, "output", "o", "single", "Output type: 'single' for one file, 'separate' for multiple files")
 	webCmd.Flags().IntVarP(&depth, "depth", "d", 0, "Depth of link traversal (default: 0, only scrape the given URLs)")
 	webCmd.Flags().StringVar(&includeSelector, "css", "", "CSS selector to extract specific content")
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
@@ -39,44 +39,80 @@ func init() {
 
 func runWeb(cmd *cobra.Command, args []string) error {
 	// Use config if available, otherwise use command-line flags
-	if len(urls) == 0 && cfg.Scrape.URL != "" {
-		urls = []string{cfg.Scrape.URL}
+	var urlConfigs []scraper.URLConfig
+	if len(urls) == 0 && len(cfg.Scrape.URLs) > 0 {
+		urlConfigs = make([]scraper.URLConfig, len(cfg.Scrape.URLs))
+		for i, u := range cfg.Scrape.URLs {
+			urlConfigs[i] = scraper.URLConfig{
+				URL:         u.URL,
+				CSSLocator:  u.CSSLocator,
+				OutputAlias: u.OutputAlias,
+			}
+		}
+	} else {
+		urlConfigs = make([]scraper.URLConfig, len(urls))
+		for i, u := range urls {
+			urlConfigs[i] = scraper.URLConfig{URL: u, CSSLocator: includeSelector}
+		}
 	}
 
-	if len(urls) == 0 {
-		return fmt.Errorf("no URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.url' in the rollup.yml file")
+	if len(urlConfigs) == 0 {
+		return fmt.Errorf("no URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.urls' in the rollup.yml file")
 	}
 
-	if outputFile == "" {
-		outputFile = generateDefaultFilename(urls)
+	scraperConfig := scraper.Config{
+		URLs:       urlConfigs,
+		OutputType: outputType,
+		Verbose:    verbose,
 	}
 
+	scrapedContent, err := scraper.ScrapeMultipleURLs(scraperConfig)
+	if err != nil {
+		return fmt.Errorf("error scraping content: %v", err)
+	}
+
+	if outputType == "single" {
+		return writeSingleFile(scrapedContent)
+	} else {
+		return writeMultipleFiles(scrapedContent)
+	}
+}
+
+func writeSingleFile(content map[string]string) error {
+	outputFile := generateDefaultFilename(urls)
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("error creating output file: %v", err)
 	}
 	defer file.Close()
 
-	for i, u := range urls {
-		extractedContent, err := scrapeRecursively(u, depth)
-		if err != nil {
-			return fmt.Errorf("error scraping content from %s: %v", u, err)
-		}
-
-		if i > 0 {
-			_, err = file.WriteString("\n\n---\n\n")
-			if err != nil {
-				return fmt.Errorf("error writing separator to file: %v", err)
-			}
-		}
-
-		_, err = file.WriteString(extractedContent)
+	for url, c := range content {
+		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s\n\n---\n\n", url, c))
 		if err != nil {
 			return fmt.Errorf("error writing content to file: %v", err)
 		}
 	}
 
-	fmt.Printf("Content has been extracted from %d URL(s) and saved to %s\n", len(urls), outputFile)
+	fmt.Printf("Content has been extracted from %d URL(s) and saved to %s\n", len(content), outputFile)
+	return nil
+}
+
+func writeMultipleFiles(content map[string]string) error {
+	for url, c := range content {
+		filename := scraper.GetFilenameFromContent(c, url)
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("error creating output file %s: %v", filename, err)
+		}
+
+		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s", url, c))
+		file.Close()
+		if err != nil {
+			return fmt.Errorf("error writing content to file %s: %v", filename, err)
+		}
+
+		fmt.Printf("Content from %s has been saved to %s\n", url, filename)
+	}
 	return nil
 }
 
