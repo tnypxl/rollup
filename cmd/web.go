@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -99,7 +102,7 @@ func writeSingleFile(content map[string]string) error {
 
 func writeMultipleFiles(content map[string]string) error {
 	for url, c := range content {
-		filename := scraper.GetFilenameFromContent(c, url)
+		filename := getFilenameFromContent(c, url)
 		file, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("error creating output file %s: %v", filename, err)
@@ -186,4 +189,33 @@ func extractAndConvertContent(urlStr string) (string, error) {
 	header := fmt.Sprintf("# Content from %s\n\n", parsedURL.String())
 
 	return header + markdown + "\n\n", nil
+}
+
+func getFilenameFromContent(content, url string) string {
+	// Try to extract title from content
+	titleStart := strings.Index(content, "<title>")
+	titleEnd := strings.Index(content, "</title>")
+	if titleStart != -1 && titleEnd != -1 && titleEnd > titleStart {
+		title := content[titleStart+7 : titleEnd]
+		return sanitizeFilename(title) + ".md"
+	}
+
+	// If no title found, use the URL
+	return sanitizeFilename(url) + ".md"
+}
+
+func sanitizeFilename(name string) string {
+	// Remove any character that isn't alphanumeric, dash, or underscore
+	reg := regexp.MustCompile("[^a-zA-Z0-9-_]+")
+	name = reg.ReplaceAllString(name, "_")
+	
+	// Trim any leading or trailing underscores
+	name = strings.Trim(name, "_")
+	
+	// If the name is empty after sanitization, use a default name
+	if name == "" {
+		name = "untitled"
+	}
+	
+	return name
 }
