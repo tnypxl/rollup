@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tnypxl/rollup/internal/config"
+	config "github.com/tnypxl/rollup/internal/config"
 )
 
 var (
@@ -51,8 +51,8 @@ whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 	},
 }
 
-func Execute(config *config.Config) error {
-	cfg = config
+func Execute(conf *config.Config) error {
+	cfg = conf
 	if cfg == nil {
 		cfg = &config.Config{} // Use an empty config if none is provided
 	}
