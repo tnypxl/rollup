@@ -53,6 +53,9 @@ whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 
 func Execute(config *config.Config) error {
 	cfg = config
+	if cfg == nil {
+		cfg = &config.Config{} // Use an empty config if none is provided
+	}
 	return rootCmd.Execute()
 }
 

@@ -13,21 +13,29 @@ import (
 var cfg *config.Config
 
 func main() {
-	configPath := config.DefaultConfigPath()
+	// Check if the command is "help"
+	isHelpCommand := len(os.Args) > 1 && (os.Args[1] == "help" || os.Args[1] == "--help" || os.Args[1] == "-h")
+
+	var cfg *config.Config
 	var err error
-	cfg, err = config.Load(configPath)
-	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
-	}
 
-	// Initialize the scraper logger with default verbosity (false)
-	scraper.SetupLogger(false)
+	if !isHelpCommand {
+		configPath := config.DefaultConfigPath()
+		cfg, err = config.Load(configPath)
+		if err != nil {
+			log.Printf("Warning: Failed to load configuration: %v", err)
+			// Continue execution without a config file
+		}
 
-	err = scraper.InitPlaywright()
-	if err != nil {
-		log.Fatalf("Failed to initialize Playwright: %v", err)
+		// Initialize the scraper logger with default verbosity (false)
+		scraper.SetupLogger(false)
+
+		err = scraper.InitPlaywright()
+		if err != nil {
+			log.Fatalf("Failed to initialize Playwright: %v", err)
+		}
+		defer scraper.ClosePlaywright()
 	}
-	defer scraper.ClosePlaywright()
 
 	if err := cmd.Execute(cfg); err != nil {
 		fmt.Println(err)
