@@ -117,10 +117,10 @@ func InitPlaywright() error {
 	logger.Println("Initializing Playwright")
 	var err error
 
-	// Install Playwright and browsers
-	err = playwright.Install()
+	// Install Playwright and Chromium browser
+	err = playwright.Install(&playwright.RunOptions{Browsers: []string{"chromium"}})
 	if err != nil {
-		return fmt.Errorf("could not install Playwright: %v", err)
+		return fmt.Errorf("could not install Playwright and Chromium: %v", err)
 	}
 
 	pw, err = playwright.Run()
