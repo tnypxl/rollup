@@ -116,6 +116,13 @@ func SetupLogger(verbose bool) {
 func InitPlaywright() error {
 	logger.Println("Initializing Playwright")
 	var err error
+
+	// Install Playwright and browsers
+	err = playwright.Install()
+	if err != nil {
+		return fmt.Errorf("could not install Playwright: %v", err)
+	}
+
 	pw, err = playwright.Run()
 	if err != nil {
 		return fmt.Errorf("could not start Playwright: %v", err)
