@@ -211,17 +211,26 @@ func getFilenameFromContent(content, urlStr string) (string, error) {
 	titleStart := strings.Index(content, "<title>")
 	titleEnd := strings.Index(content, "</title>")
 	if titleStart != -1 && titleEnd != -1 && titleEnd > titleStart {
-		title := content[titleStart+7 : titleEnd]
-		return sanitizeFilename(title) + ".rollup.md", nil
+		title := strings.TrimSpace(content[titleStart+7 : titleEnd])
+		if title != "" {
+			return sanitizeFilename(title) + ".rollup.md", nil
+		}
 	}
 
-	// If no title found, use the URL without the protocol
+	// If no title found or title is empty, use the URL
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return "", fmt.Errorf("invalid URL: %v", err)
 	}
 	
-	filename := parsedURL.Host + parsedURL.Path
+	if parsedURL.Host == "" {
+		return "", fmt.Errorf("invalid URL: missing host")
+	}
+	
+	filename := parsedURL.Host
+	if parsedURL.Path != "" && parsedURL.Path != "/" {
+		filename += strings.TrimSuffix(parsedURL.Path, "/")
+	}
 	return sanitizeFilename(filename) + ".rollup.md", nil
 }
 

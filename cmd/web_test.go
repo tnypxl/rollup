@@ -76,7 +76,9 @@ func TestGetFilenameFromContent(t *testing.T) {
 		{"No title here", "http://example.com/page", "example_com_page.rollup.md", false},
 		{"<title>  Trim  Me  </title>", "http://example.com", "Trim_Me.rollup.md", false},
 		{"<title></title>", "http://example.com", "example_com.rollup.md", false},
+		{"<title>   </title>", "http://example.com", "example_com.rollup.md", false},
 		{"Invalid URL", "not a valid url", "", true},
+		{"No host", "http://", "", true},
 	}
 
 	for _, test := range tests {
