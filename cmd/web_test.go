@@ -70,18 +70,28 @@ func TestGetFilenameFromContent(t *testing.T) {
 		content  string
 		url      string
 		expected string
+		expectErr bool
 	}{
-		{"<title>Test Page</title>", "http://example.com", "Test_Page.md"},
-		{"No title here", "http://example.com/page", "example_com_page.md"},
-		{"<title>  Trim  Me  </title>", "http://example.com", "Trim_Me.md"},
-		{"<title></title>", "http://example.com", "example_com.md"},
-		{"Invalid URL", "not a valid url", "untitled.md"},
+		{"<title>Test Page</title>", "http://example.com", "Test_Page.rollup.md", false},
+		{"No title here", "http://example.com/page", "example_com_page.rollup.md", false},
+		{"<title>  Trim  Me  </title>", "http://example.com", "Trim_Me.rollup.md", false},
+		{"<title></title>", "http://example.com", "example_com.rollup.md", false},
+		{"Invalid URL", "not a valid url", "", true},
 	}
 
 	for _, test := range tests {
-		result := getFilenameFromContent(test.content, test.url)
-		if result != test.expected {
-			t.Errorf("getFilenameFromContent(%q, %q) = %q; want %q", test.content, test.url, result, test.expected)
+		result, err := getFilenameFromContent(test.content, test.url)
+		if test.expectErr {
+			if err == nil {
+				t.Errorf("getFilenameFromContent(%q, %q) expected an error, but got none", test.content, test.url)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("getFilenameFromContent(%q, %q) unexpected error: %v", test.content, test.url, err)
+			}
+			if result != test.expected {
+				t.Errorf("getFilenameFromContent(%q, %q) = %q; want %q", test.content, test.url, result, test.expected)
+			}
 		}
 	}
 }

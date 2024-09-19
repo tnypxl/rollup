@@ -203,23 +203,23 @@ func extractAndConvertContent(urlStr string) (string, error) {
 	return header + markdown + "\n\n", nil
 }
 
-func getFilenameFromContent(content, urlStr string) string {
+func getFilenameFromContent(content, urlStr string) (string, error) {
 	// Try to extract title from content
 	titleStart := strings.Index(content, "<title>")
 	titleEnd := strings.Index(content, "</title>")
 	if titleStart != -1 && titleEnd != -1 && titleEnd > titleStart {
 		title := content[titleStart+7 : titleEnd]
-		return sanitizeFilename(title) + ".md"
+		return sanitizeFilename(title) + ".rollup.md", nil
 	}
 
 	// If no title found, use the URL without the protocol
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
-		return "untitled.md"
+		return "", fmt.Errorf("invalid URL: %v", err)
 	}
 	
 	filename := parsedURL.Host + parsedURL.Path
-	return sanitizeFilename(filename) + ".md"
+	return sanitizeFilename(filename) + ".rollup.md", nil
 }
 
 func sanitizeFilename(name string) string {
