@@ -9,7 +9,9 @@ Rollup is a powerful CLI tool designed to aggregate and process files based on s
 - Support for code-generated file detection
 - Advanced web scraping functionality
 - Verbose logging option for detailed output
-- Exclusionary CSS paths for web scraping
+- Exclusionary CSS selectors for web scraping
+- Support for multiple URLs in web scraping
+- Configurable output format (single file or separate files)
 
 ## Installation
 
@@ -24,19 +26,30 @@ go get github.com/tnypxl/rollup
 Basic usage:
 
 ```bash
-rollup [flags]
+rollup [command] [flags]
 ```
 
-### Flags
+### Commands
 
-- `--file-types`: Comma-separated list of file types to include (default: all files)
-- `--ignore`: Comma-separated list of patterns to ignore
-- `--code-generated`: Comma-separated list of patterns for code-generated files
+- `rollup`: Run the main rollup functionality
+- `rollup web`: Run the web scraping functionality
+
+### Flags for main rollup command
+
+- `--path, -p`: Path to the project directory (default: current directory)
+- `--types, -t`: Comma-separated list of file extensions to include (default: .go,.md,.txt)
+- `--codegen, -g`: Comma-separated list of glob patterns for code-generated files
+- `--ignore, -i`: Comma-separated list of glob patterns for files to ignore
+- `--config, -f`: Path to the configuration file (default: rollup.yml in the current directory)
 - `--verbose, -v`: Enable verbose logging
-- `--config`: Path to the configuration file (default: rollup.yml)
-- `--url`: URL to scrape (for web scraping functionality)
-- `--css`: CSS selector for content extraction (for web scraping)
-- `--exclude-css`: CSS selector for content to exclude (for web scraping)
+
+### Flags for web scraping command
+
+- `--urls, -u`: URLs of the webpages to scrape (comma-separated)
+- `--output, -o`: Output type: 'single' for one file, 'separate' for multiple files (default: single)
+- `--depth, -d`: Depth of link traversal (default: 0, only scrape the given URLs)
+- `--css`: CSS selector to extract specific content
+- `--exclude`: CSS selectors to exclude from the extracted content (comma-separated)
 
 ## Configuration
 
@@ -46,19 +59,22 @@ Example `rollup.yml`:
 
 ```yaml
 file_types:
-  - .go
-  - .md
+  - go
+  - md
 ignore:
   - vendor/**
   - **/test/**
 code_generated:
   - **/generated/**
 scrape:
-  url: https://example.com
-  css_locator: .content
-  exclude_selectors:
-    - .ads
-    - .navigation
+  urls:
+    - url: https://example.com
+      css_locator: .content
+      exclude_selectors:
+        - .ads
+        - .navigation
+      output_alias: example
+  output_type: single
 ```
 
 ## Examples
@@ -72,7 +88,7 @@ scrape:
 2. Use specific file types and enable verbose logging:
 
    ```bash
-   rollup --file-types=.go,.js,.py --verbose
+   rollup --types=go,js,py --verbose
    ```
 
 3. Use a custom configuration file:
@@ -81,9 +97,15 @@ scrape:
    rollup --config=my-config.yml
    ```
 
-4. Web scraping with content exclusion:
+4. Web scraping with multiple URLs and content exclusion:
+
    ```bash
-   rollup web --url=https://example.com --css=.main-content --exclude-css=.ads,.sidebar
+   rollup web --urls=https://example.com,https://another-example.com --css=.main-content --exclude=.ads,.sidebar
+   ```
+
+5. Web scraping with separate output files:
+   ```bash
+   rollup web --urls=https://example.com,https://another-example.com --output=separate
    ```
 
 ## Contributing
