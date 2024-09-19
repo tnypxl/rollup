@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ var (
 
 // Config holds the scraper configuration
 type Config struct {
-	URLs       []URLConfig
+	Sites      []SiteConfig
 	OutputType string
 	Verbose    bool
 	Scrape     ScrapeConfig
@@ -36,6 +37,25 @@ type Config struct {
 type ScrapeConfig struct {
 	RequestsPerSecond float64
 	BurstLimit        int
+}
+
+// SiteConfig holds configuration for a single site
+type SiteConfig struct {
+	BaseURL          string
+	CSSLocator       string
+	ExcludeSelectors []string
+	MaxDepth         int
+	AllowedPaths     []string
+	ExcludePaths     []string
+	OutputAlias      string
+	PathOverrides    []PathOverride
+}
+
+// PathOverride holds path-specific overrides
+type PathOverride struct {
+	Path             string
+	CSSLocator       string
+	ExcludeSelectors []string
 }
 
 func ScrapeSites(config Config) (map[string]string, error) {
@@ -124,8 +144,8 @@ func scrapeSite(site SiteConfig, config Config, results chan<- struct {
     }
 }
 
-func isAllowedURL(url string, site SiteConfig) bool {
-    parsedURL, err := url.Parse(url)
+func isAllowedURL(urlStr string, site SiteConfig) bool {
+    parsedURL, err := url.Parse(urlStr)
     if err != nil {
         return false
     }
@@ -150,8 +170,8 @@ func isAllowedURL(url string, site SiteConfig) bool {
     return false
 }
 
-func getOverrides(url string, site SiteConfig) (string, []string) {
-    parsedURL, _ := url.Parse(url)
+func getOverrides(urlStr string, site SiteConfig) (string, []string) {
+    parsedURL, _ := url.Parse(urlStr)
     path := parsedURL.Path
 
     for _, override := range site.PathOverrides {
