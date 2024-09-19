@@ -8,10 +8,13 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"sync"
+	"context"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/playwright-community/playwright-go"
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"golang.org/x/time/rate"
 )
 
 var logger *log.Logger
@@ -36,8 +39,37 @@ func ScrapeMultipleURLs(config Config) (map[string]string, error) {
 		err     error
 	}, len(config.URLs))
 
+	// Use default values if not specified in the config
+	requestsPerSecond := 0.5 // Default to 1 request every 2 seconds
+	if config.Scrape.RequestsPerSecond > 0 {
+		requestsPerSecond = config.Scrape.RequestsPerSecond
+	}
+
+	burstLimit := 1 // Default to 1
+	if config.Scrape.BurstLimit > 0 {
+		burstLimit = config.Scrape.BurstLimit
+	}
+
+	// Create a rate limiter based on the configuration
+	limiter := rate.NewLimiter(rate.Limit(requestsPerSecond), burstLimit)
+
+	var wg sync.WaitGroup
 	for _, urlConfig := range config.URLs {
+		wg.Add(1)
 		go func(cfg URLConfig) {
+			defer wg.Done()
+			
+			// Wait for rate limiter before making the request
+			err := limiter.Wait(context.Background())
+			if err != nil {
+				results <- struct {
+					url     string
+					content string
+					err     error
+				}{cfg.URL, "", fmt.Errorf("rate limiter error: %v", err)}
+				return
+			}
+
 			content, err := scrapeURL(cfg)
 			results <- struct {
 				url     string
@@ -47,9 +79,13 @@ func ScrapeMultipleURLs(config Config) (map[string]string, error) {
 		}(urlConfig)
 	}
 
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
 	scrapedContent := make(map[string]string)
-	for i := 0; i < len(config.URLs); i++ {
-		result := <-results
+	for result := range results {
 		if result.err != nil {
 			logger.Printf("Error scraping %s: %v\n", result.url, result.err)
 			continue

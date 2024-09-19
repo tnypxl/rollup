@@ -15,8 +15,10 @@ type Config struct {
 }
 
 type ScrapeConfig struct {
-	URLs       []URLConfig `yaml:"urls"`
-	OutputType string      `yaml:"output_type"`
+	URLs              []URLConfig `yaml:"urls"`
+	OutputType        string      `yaml:"output_type"`
+	RequestsPerSecond float64     `yaml:"requests_per_second"`
+	BurstLimit        int         `yaml:"burst_limit"`
 }
 
 type URLConfig struct {
