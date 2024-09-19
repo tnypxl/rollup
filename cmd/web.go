@@ -64,6 +64,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
                 BaseURL:          u,
                 CSSLocator:       includeSelector,
                 ExcludeSelectors: excludeSelectors,
+                MaxDepth:         depth,
             }
         }
     }
@@ -74,7 +75,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
 
     scraperConfig := scraper.Config{
         Sites:      siteConfigs,
-        OutputType: cfg.Scrape.OutputType,
+        OutputType: outputType,
         Verbose:    verbose,
         Scrape: scraper.ScrapeConfig{
             RequestsPerSecond: cfg.Scrape.RequestsPerSecond,
@@ -87,11 +88,11 @@ func runWeb(cmd *cobra.Command, args []string) error {
         return fmt.Errorf("error scraping content: %v", err)
     }
 
-	if outputType == "single" {
-		return writeSingleFile(scrapedContent)
-	} else {
-		return writeMultipleFiles(scrapedContent)
-	}
+    if outputType == "single" {
+        return writeSingleFile(scrapedContent)
+    } else {
+        return writeMultipleFiles(scrapedContent)
+    }
 }
 
 func writeSingleFile(content map[string]string) error {
