@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	config "github.com/tnypxl/rollup/internal/config"
 )
@@ -33,4 +31,5 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose logging")
 
 	rootCmd.AddCommand(filesCmd)
+	rootCmd.AddCommand(webCmd)
 }

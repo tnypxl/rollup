@@ -153,81 +153,81 @@ func ClosePlaywright() {
 
 // FetchWebpageContent retrieves the content of a webpage using Playwright
 func FetchWebpageContent(urlStr string) (string, error) {
-	log.Printf("Fetching webpage content for URL: %s\n", urlStr)
+	logger.Printf("Fetching webpage content for URL: %s\n", urlStr)
 
 	page, err := browser.NewPage()
 	if err != nil {
-		log.Printf("Error creating new page: %v\n", err)
+		logger.Printf("Error creating new page: %v\n", err)
 		return "", fmt.Errorf("could not create page: %v", err)
 	}
 	defer page.Close()
 
 	time.Sleep(time.Duration(rand.Intn(2000)+1000) * time.Millisecond)
 
-	log.Printf("Navigating to URL: %s\n", urlStr)
+	logger.Printf("Navigating to URL: %s\n", urlStr)
 	if _, err = page.Goto(urlStr, playwright.PageGotoOptions{
 		WaitUntil: playwright.WaitUntilStateNetworkidle,
 	}); err != nil {
-		log.Printf("Error navigating to page: %v\n", err)
+		logger.Printf("Error navigating to page: %v\n", err)
 		return "", fmt.Errorf("could not go to page: %v", err)
 	}
 
-	log.Println("Waiting for page load state")
+	logger.Println("Waiting for page load state")
 	err = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
 		State: playwright.LoadStateNetworkidle,
 	})
 	if err != nil {
-		log.Printf("Error waiting for page load: %v\n", err)
+		logger.Printf("Error waiting for page load: %v\n", err)
 		return "", fmt.Errorf("error waiting for page load: %v", err)
 	}
 
-	log.Println("Scrolling page")
+	logger.Println("Scrolling page")
 	err = scrollPage(page)
 	if err != nil {
-		log.Printf("Error scrolling page: %v\n", err)
+		logger.Printf("Error scrolling page: %v\n", err)
 		return "", fmt.Errorf("error scrolling page: %v", err)
 	}
 
-	log.Println("Waiting for body element")
+	logger.Println("Waiting for body element")
 	_, err = page.WaitForSelector("body", playwright.PageWaitForSelectorOptions{
 		State: playwright.WaitForSelectorStateVisible,
 	})
 	if err != nil {
-		log.Printf("Error waiting for body: %v\n", err)
+		logger.Printf("Error waiting for body: %v\n", err)
 		return "", fmt.Errorf("error waiting for body: %v", err)
 	}
 
-	log.Println("Getting page content")
+	logger.Println("Getting page content")
 	content, err := page.Content()
 	if err != nil {
-		log.Printf("Error getting page content: %v\n", err)
+		logger.Printf("Error getting page content: %v\n", err)
 		return "", fmt.Errorf("could not get page content: %v", err)
 	}
 
 	if content == "" {
-		log.Println(" content is empty, falling back to body content")
+		logger.Println(" content is empty, falling back to body content")
 		content, err = page.InnerHTML("body")
 		if err != nil {
-			log.Printf("Error getting body content: %v\n", err)
+			logger.Printf("Error getting body content: %v\n", err)
 			return "", fmt.Errorf("could not get body content: %v", err)
 		}
 	}
 
-	log.Printf("Successfully fetched webpage content (length: %d)\n", len(content))
+	logger.Printf("Successfully fetched webpage content (length: %d)\n", len(content))
 	return content, nil
 }
 
 // ProcessHTMLContent converts HTML content to Markdown
 func ProcessHTMLContent(htmlContent string, config Config) (string, error) {
-	log.Printf("Processing HTML content (length: %d)\n", len(htmlContent))
+	logger.Printf("Processing HTML content (length: %d)\n", len(htmlContent))
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
-		log.Printf("Error parsing HTML: %v\n", err)
+		logger.Printf("Error parsing HTML: %v\n", err)
 		return "", fmt.Errorf("error parsing HTML: %v", err)
 	}
 
 	selection := doc.Find("body")
-	log.Println("Processing entire body")
+	logger.Println("Processing entire body")
 
 	if selection.Length() == 0 {
 		return "", fmt.Errorf("no content found in the document")
@@ -235,7 +235,7 @@ func ProcessHTMLContent(htmlContent string, config Config) (string, error) {
 
 	content, err := selection.Html()
 	if err != nil {
-		log.Printf("Error extracting content: %v\n", err)
+		logger.Printf("Error extracting content: %v\n", err)
 		return "", fmt.Errorf("error extracting content: %v", err)
 	}
 
@@ -245,16 +245,16 @@ func ProcessHTMLContent(htmlContent string, config Config) (string, error) {
 	// Convert HTML to Markdown
 	markdown, err := converter.ConvertString(content)
 	if err != nil {
-		log.Printf("Error converting HTML to Markdown: %v\n", err)
+		logger.Printf("Error converting HTML to Markdown: %v\n", err)
 		return "", fmt.Errorf("error converting HTML to Markdown: %v", err)
 	}
 
-	log.Printf("Converted HTML to Markdown (length: %d)\n", len(markdown))
+	logger.Printf("Converted HTML to Markdown (length: %d)\n", len(markdown))
 	return markdown, nil
 }
 
 func scrollPage(page playwright.Page) error {
-	log.Println("Starting page scroll")
+	logger.Println("Starting page scroll")
 	script := `
 		() => {
 			window.scrollTo(0, document.body.scrollHeight);
@@ -266,7 +266,7 @@ func scrollPage(page playwright.Page) error {
 	for i := 0; i < 250; i++ {
 		height, err := page.Evaluate(script)
 		if err != nil {
-			log.Printf("Error scrolling (iteration %d): %v\n", i+1, err)
+			logger.Printf("Error scrolling (iteration %d): %v\n", i+1, err)
 			return fmt.Errorf("error scrolling: %v", err)
 		}
 
@@ -277,14 +277,14 @@ func scrollPage(page playwright.Page) error {
 		case float64:
 			currentHeight = int(v)
 		default:
-			log.Printf("Unexpected height type: %T\n", height)
+			logger.Printf("Unexpected height type: %T\n", height)
 			return fmt.Errorf("unexpected height type: %T", height)
 		}
 
-		log.Printf("Scroll iteration %d: height = %d\n", i+1, currentHeight)
+		logger.Printf("Scroll iteration %d: height = %d\n", i+1, currentHeight)
 
 		if currentHeight == previousHeight {
-			log.Println("Reached bottom of the page")
+			logger.Println("Reached bottom of the page")
 			break
 		}
 
@@ -293,20 +293,20 @@ func scrollPage(page playwright.Page) error {
 		page.WaitForTimeout(500)
 	}
 
-	log.Println("Scrolling back to top")
+	logger.Println("Scrolling back to top")
 	_, err := page.Evaluate(`() => { window.scrollTo(0, 0); }`)
 	if err != nil {
-		log.Printf("Error scrolling back to top: %v\n", err)
+		logger.Printf("Error scrolling back to top: %v\n", err)
 		return fmt.Errorf("error scrolling back to top: %v", err)
 	}
 
-	log.Println("Page scroll completed")
+	logger.Println("Page scroll completed")
 	return nil
 }
 
 // ExtractLinks extracts all links from the given URL
 func ExtractLinks(urlStr string) ([]string, error) {
-	log.Printf("Extracting links from URL: %s\n", urlStr)
+	logger.Printf("Extracting links from URL: %s\n", urlStr)
 
 	page, err := browser.NewPage()
 	if err != nil {
@@ -333,13 +333,13 @@ func ExtractLinks(urlStr string) ([]string, error) {
 		result = append(result, link.(string))
 	}
 
-	log.Printf("Extracted %d links\n", len(result))
+	logger.Printf("Extracted %d links\n", len(result))
 	return result, nil
 }
 
 // ExtractContentWithCSS extracts content from HTML using a CSS selector
 func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []string) (string, error) {
-	log.Printf("Extracting content with CSS selector: %s\n", includeSelector)
+	logger.Printf("Extracting content with CSS selector: %s\n", includeSelector)
 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {
@@ -348,7 +348,7 @@ func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []s
 
 	selection := doc.Find(includeSelector)
 	if selection.Length() == 0 {
-		log.Printf("Warning: No content found with CSS selector: %s. Falling back to body content.\n", includeSelector)
+		logger.Printf("Warning: No content found with CSS selector: %s. Falling back to body content.\n", includeSelector)
 		selection = doc.Find("body")
 		if selection.Length() == 0 {
 			return "", fmt.Errorf("no content found in body")
@@ -364,6 +364,6 @@ func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []s
 		return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
 	}
 
-	log.Printf("Extracted content length: %d\n", len(selectedContent))
+	logger.Printf("Extracted content length: %d\n", len(selectedContent))
 	return selectedContent, nil
 }
