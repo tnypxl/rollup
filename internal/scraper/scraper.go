@@ -38,85 +38,148 @@ type ScrapeConfig struct {
 	BurstLimit        int
 }
 
-// ScrapeMultipleURLs scrapes multiple URLs concurrently
-func ScrapeMultipleURLs(config Config) (map[string]string, error) {
-	results := make(chan struct {
-		url     string
-		content string
-		err     error
-	}, len(config.URLs))
+func ScrapeSites(config Config) (map[string]string, error) {
+    results := make(chan struct {
+        url     string
+        content string
+        err     error
+    })
 
-	// Use default values if not specified in the config
-	requestsPerSecond := 0.5 // Default to 1 request every 2 seconds
-	if config.Scrape.RequestsPerSecond > 0 {
-		requestsPerSecond = config.Scrape.RequestsPerSecond
-	}
+    limiter := rate.NewLimiter(rate.Limit(config.Scrape.RequestsPerSecond), config.Scrape.BurstLimit)
 
-	burstLimit := 1 // Default to 1
-	if config.Scrape.BurstLimit > 0 {
-		burstLimit = config.Scrape.BurstLimit
-	}
+    var wg sync.WaitGroup
+    for _, site := range config.Sites {
+        wg.Add(1)
+        go func(site SiteConfig) {
+            defer wg.Done()
+            scrapeSite(site, config, results, limiter)
+        }(site)
+    }
 
-	// Create a rate limiter based on the configuration
-	limiter := rate.NewLimiter(rate.Limit(requestsPerSecond), burstLimit)
+    go func() {
+        wg.Wait()
+        close(results)
+    }()
 
-	var wg sync.WaitGroup
-	for _, urlConfig := range config.URLs {
-		wg.Add(1)
-		go func(cfg URLConfig) {
-			defer wg.Done()
-			
-			// Wait for rate limiter before making the request
-			err := limiter.Wait(context.Background())
-			if err != nil {
-				results <- struct {
-					url     string
-					content string
-					err     error
-				}{cfg.URL, "", fmt.Errorf("rate limiter error: %v", err)}
-				return
-			}
+    scrapedContent := make(map[string]string)
+    for result := range results {
+        if result.err != nil {
+            logger.Printf("Error scraping %s: %v\n", result.url, result.err)
+            continue
+        }
+        scrapedContent[result.url] = result.content
+    }
 
-			content, err := scrapeURL(cfg)
-			results <- struct {
-				url     string
-				content string
-				err     error
-			}{cfg.URL, content, err}
-		}(urlConfig)
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	scrapedContent := make(map[string]string)
-	for result := range results {
-		if result.err != nil {
-			logger.Printf("Error scraping %s: %v\n", result.url, result.err)
-			continue
-		}
-		scrapedContent[result.url] = result.content
-	}
-
-	return scrapedContent, nil
+    return scrapedContent, nil
 }
 
-func scrapeURL(config URLConfig) (string, error) {
-	content, err := FetchWebpageContent(config.URL)
-	if err != nil {
-		return "", err
-	}
+func scrapeSite(site SiteConfig, config Config, results chan<- struct {
+    url     string
+    content string
+    err     error
+}, limiter *rate.Limiter) {
+    visited := make(map[string]bool)
+    queue := []string{site.BaseURL}
 
-	if config.CSSLocator != "" {
-		content, err = ExtractContentWithCSS(content, config.CSSLocator, config.ExcludeSelectors)
-		if err != nil {
-			return "", err
-		}
-	}
+    for len(queue) > 0 {
+        url := queue[0]
+        queue = queue[1:]
 
-	return ProcessHTMLContent(content, Config{})
+        if visited[url] {
+            continue
+        }
+        visited[url] = true
+
+        if !isAllowedURL(url, site) {
+            continue
+        }
+
+        // Wait for rate limiter before making the request
+        err := limiter.Wait(context.Background())
+        if err != nil {
+            results <- struct {
+                url     string
+                content string
+                err     error
+            }{url, "", fmt.Errorf("rate limiter error: %v", err)}
+            continue
+        }
+
+        cssLocator, excludeSelectors := getOverrides(url, site)
+        content, err := scrapeURL(url, cssLocator, excludeSelectors)
+        results <- struct {
+            url     string
+            content string
+            err     error
+        }{url, content, err}
+
+        if len(visited) < site.MaxDepth {
+            links, _ := ExtractLinks(url)
+            for _, link := range links {
+                if !visited[link] && isAllowedURL(link, site) {
+                    queue = append(queue, link)
+                }
+            }
+        }
+    }
+}
+
+func isAllowedURL(url string, site SiteConfig) bool {
+    parsedURL, err := url.Parse(url)
+    if err != nil {
+        return false
+    }
+
+    baseURL, _ := url.Parse(site.BaseURL)
+    if parsedURL.Host != baseURL.Host {
+        return false
+    }
+
+    path := parsedURL.Path
+    for _, allowedPath := range site.AllowedPaths {
+        if strings.HasPrefix(path, allowedPath) {
+            for _, excludePath := range site.ExcludePaths {
+                if strings.HasPrefix(path, excludePath) {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+
+    return false
+}
+
+func getOverrides(url string, site SiteConfig) (string, []string) {
+    parsedURL, _ := url.Parse(url)
+    path := parsedURL.Path
+
+    for _, override := range site.PathOverrides {
+        if strings.HasPrefix(path, override.Path) {
+            if override.CSSLocator != "" {
+                return override.CSSLocator, override.ExcludeSelectors
+            }
+            return site.CSSLocator, override.ExcludeSelectors
+        }
+    }
+
+    return site.CSSLocator, site.ExcludeSelectors
+}
+
+func scrapeURL(url, cssLocator string, excludeSelectors []string) (string, error) {
+    content, err := FetchWebpageContent(url)
+    if err != nil {
+        return "", err
+    }
+
+    if cssLocator != "" {
+        content, err = ExtractContentWithCSS(content, cssLocator, excludeSelectors)
+        if err != nil {
+            return "", err
+        }
+    }
+
+    return ProcessHTMLContent(content, Config{})
 }
 
 func getFilenameFromContent(content, url string) string {

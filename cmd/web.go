@@ -38,41 +38,53 @@ func init() {
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
-	scraperConfig.Verbose = verbose
+    scraperConfig.Verbose = verbose
 
-	// Use config if available, otherwise use command-line flags
-	var urlConfigs []scraper.URLConfig
-	if len(urls) == 0 && len(cfg.Scrape.URLs) > 0 {
-		urlConfigs = make([]scraper.URLConfig, len(cfg.Scrape.URLs))
-		for i, u := range cfg.Scrape.URLs {
-			urlConfigs[i] = scraper.URLConfig{
-				URL:              u.URL,
-				CSSLocator:       u.CSSLocator,
-				ExcludeSelectors: u.ExcludeSelectors,
-				OutputAlias:      u.OutputAlias,
-			}
-		}
-	} else {
-		urlConfigs = make([]scraper.URLConfig, len(urls))
-		for i, u := range urls {
-			urlConfigs[i] = scraper.URLConfig{URL: u, CSSLocator: includeSelector}
-		}
-	}
+    var siteConfigs []scraper.SiteConfig
+    if len(cfg.Scrape.Sites) > 0 {
+        siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
+        for i, site := range cfg.Scrape.Sites {
+            siteConfigs[i] = scraper.SiteConfig{
+                BaseURL:          site.BaseURL,
+                CSSLocator:       site.CSSLocator,
+                ExcludeSelectors: site.ExcludeSelectors,
+                MaxDepth:         site.MaxDepth,
+                AllowedPaths:     site.AllowedPaths,
+                ExcludePaths:     site.ExcludePaths,
+                OutputAlias:      site.OutputAlias,
+                PathOverrides:    site.PathOverrides,
+            }
+        }
+    } else {
+        // Fallback to URL-based configuration if no sites are defined
+        siteConfigs = make([]scraper.SiteConfig, len(urls))
+        for i, u := range urls {
+            siteConfigs[i] = scraper.SiteConfig{
+                BaseURL:          u,
+                CSSLocator:       includeSelector,
+                ExcludeSelectors: excludeSelectors,
+            }
+        }
+    }
 
-	if len(urlConfigs) == 0 {
-		return fmt.Errorf("no URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.urls' in the rollup.yml file")
-	}
+    if len(siteConfigs) == 0 {
+        return fmt.Errorf("no sites or URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.sites' in the rollup.yml file")
+    }
 
-	scraperConfig := scraper.Config{
-		URLs:       urlConfigs,
-		OutputType: outputType,
-		Verbose:    verbose,
-	}
+    scraperConfig := scraper.Config{
+        Sites:      siteConfigs,
+        OutputType: cfg.Scrape.OutputType,
+        Verbose:    verbose,
+        Scrape: scraper.ScrapeConfig{
+            RequestsPerSecond: cfg.Scrape.RequestsPerSecond,
+            BurstLimit:        cfg.Scrape.BurstLimit,
+        },
+    }
 
-	scrapedContent, err := scraper.ScrapeMultipleURLs(scraperConfig)
-	if err != nil {
-		return fmt.Errorf("error scraping content: %v", err)
-	}
+    scrapedContent, err := scraper.ScrapeSites(scraperConfig)
+    if err != nil {
+        return fmt.Errorf("error scraping content: %v", err)
+    }
 
 	if outputType == "single" {
 		return writeSingleFile(scrapedContent)
