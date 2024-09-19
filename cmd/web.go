@@ -115,7 +115,10 @@ func writeSingleFile(content map[string]string) error {
 
 func writeMultipleFiles(content map[string]string) error {
 	for url, c := range content {
-		filename := getFilenameFromContent(c, url)
+		filename, err := getFilenameFromContent(c, url)
+		if err != nil {
+			return fmt.Errorf("error generating filename for %s: %v", url, err)
+		}
 		file, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("error creating output file %s: %v", filename, err)
