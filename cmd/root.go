@@ -32,4 +32,5 @@ func init() {
 
 	rootCmd.AddCommand(filesCmd)
 	rootCmd.AddCommand(webCmd)
+	rootCmd.AddCommand(generateCmd)
 }
