@@ -7,9 +7,6 @@ import (
 	"github.com/tnypxl/rollup/internal/scraper"
 )
 
-var testExtractAndConvertContent = extractAndConvertContent
-var testExtractLinks = scraper.ExtractLinks
-
 func TestConvertPathOverrides(t *testing.T) {
 	configOverrides := []config.PathOverride{
 		{
