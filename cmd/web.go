@@ -149,13 +149,13 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 
 	visited[urlStr] = true
 
-	content, err := extractAndConvertContent(urlStr)
+	content, err := testExtractAndConvertContent(urlStr)
 	if err != nil {
 		return "", err
 	}
 
 	if depth > 0 {
-		links, err := scraper.ExtractLinks(urlStr)
+		links, err := testExtractLinks(urlStr)
 		if err != nil {
 			return content, fmt.Errorf("error extracting links: %v", err)
 		}
@@ -172,6 +172,9 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 
 	return content, nil
 }
+
+var testExtractAndConvertContent = extractAndConvertContent
+var testExtractLinks = scraper.ExtractLinks
 
 func extractAndConvertContent(urlStr string) (string, error) {
 	content, err := scraper.FetchWebpageContent(urlStr)

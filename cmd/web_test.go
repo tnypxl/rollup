@@ -7,6 +7,9 @@ import (
 	"github.com/tnypxl/rollup/internal/scraper"
 )
 
+var testExtractAndConvertContent = extractAndConvertContent
+var testExtractLinks = scraper.ExtractLinks
+
 func TestConvertPathOverrides(t *testing.T) {
 	configOverrides := []config.PathOverride{
 		{
@@ -97,25 +100,21 @@ func mockExtractLinks(urlStr string) ([]string, error) {
 
 func TestScrapeURL(t *testing.T) {
 	// Store the original functions
-	originalExtractAndConvertContent := extractAndConvertContent
-	originalExtractLinks := scraper.ExtractLinks
+	originalExtractAndConvertContent := testExtractAndConvertContent
+	originalExtractLinks := testExtractLinks
 
 	// Define mock functions
-	mockExtractAndConvertContent := func(urlStr string) (string, error) {
+	testExtractAndConvertContent = func(urlStr string) (string, error) {
 		return "Mocked content for " + urlStr, nil
 	}
-	mockExtractLinks := func(urlStr string) ([]string, error) {
+	testExtractLinks = func(urlStr string) ([]string, error) {
 		return []string{"http://example.com/link1", "http://example.com/link2"}, nil
 	}
 
-	// Replace the actual functions with mocks
-	extractAndConvertContent = mockExtractAndConvertContent
-	scraper.ExtractLinks = mockExtractLinks
-
 	// Defer the restoration of original functions
 	defer func() {
-		extractAndConvertContent = originalExtractAndConvertContent
-		scraper.ExtractLinks = originalExtractLinks
+		testExtractAndConvertContent = originalExtractAndConvertContent
+		testExtractLinks = originalExtractLinks
 	}()
 
 	tests := []struct {
