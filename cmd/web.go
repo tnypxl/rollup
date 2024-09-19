@@ -114,18 +114,26 @@ func writeSingleFile(content map[string]string) error {
 	return nil
 }
 
-func writeMultipleFiles(content map[string]string, outputFilename string) error {
-	file, err := os.Create(outputFilename)
-	if err != nil {
-		return fmt.Errorf("error creating output file %s: %v", outputFilename, err)
-	}
-	defer file.Close()
-
-	for path, c := range content {
-		_, err = file.WriteString(fmt.Sprintf("# File: %s\n\n%s\n\n", path, c))
+func writeMultipleFiles(content map[string]string) error {
+	for url, c := range content {
+		filename, err := getFilenameFromContent(c, url)
 		if err != nil {
-			return fmt.Errorf("error writing content to file %s: %v", outputFilename, err)
+			return fmt.Errorf("error generating filename for %s: %v", url, err)
 		}
+
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("error creating output file %s: %v", filename, err)
+		}
+
+		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s\n", url, c))
+		if err != nil {
+			file.Close()
+			return fmt.Errorf("error writing content to file %s: %v", filename, err)
+		}
+
+		file.Close()
+		fmt.Printf("Content from %s has been saved to %s\n", url, filename)
 	}
 
 	return nil
