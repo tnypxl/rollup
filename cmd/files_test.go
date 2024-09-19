@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yourusername/yourproject/internal/config"
+	"github.com/tnypxl/rollup/internal/config"
 )
 
 func TestMatchGlob(t *testing.T) {
@@ -100,9 +100,10 @@ func TestRunRollup(t *testing.T) {
 	}
 
 	// Set up test configuration
-	cfg = &Config{
-		FileTypes: []string{"go", "txt"},
-		Ignore:    []string{"*.json"},
+	cfg = &config.Config{
+		FileTypes:     []string{"go", "txt"},
+		Ignore:        []string{"*.json"},
+		CodeGenerated: []string{},
 	}
 	path = tempDir
 
