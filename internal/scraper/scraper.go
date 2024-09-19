@@ -29,6 +29,13 @@ type Config struct {
 	URLs       []URLConfig
 	OutputType string
 	Verbose    bool
+	Scrape     ScrapeConfig
+}
+
+// ScrapeConfig holds the scraping-specific configuration
+type ScrapeConfig struct {
+	RequestsPerSecond float64
+	BurstLimit        int
 }
 
 // ScrapeMultipleURLs scrapes multiple URLs concurrently
