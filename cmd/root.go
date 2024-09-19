@@ -27,7 +27,7 @@ var rootCmd = &cobra.Command{
 	Long: `Rollup is a tool that writes the contents of all files (with target custom file types provided)
 in a given project, current path or a custom path, to a single timestamped markdown file
 whose name is <project-directory-name>-rollup-<timestamp>.md.`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		// Skip config loading and rollup execution for help command
 		if cmd.Name() == "help" {
 			return nil
