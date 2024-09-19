@@ -22,3 +22,6 @@ go.work
 
 # Ignore rollup config file
 rollup.yml
+
+# Ignore rollup executable
+rollup

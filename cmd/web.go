@@ -122,7 +122,7 @@ func writeMultipleFiles(content map[string]string) error {
 
 func generateDefaultFilename(urls []string) string {
 	timestamp := time.Now().Format("20060102-150405")
-	return fmt.Sprintf("rollup-web-%s.md", timestamp)
+	return fmt.Sprintf("web-%s.rollup.md", timestamp)
 }
 
 func scrapeRecursively(urlStr string, depth int) (string, error) {
