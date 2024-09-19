@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"testing"
-	"net/url"
+	"strings"
 	"github.com/tnypxl/rollup/internal/config"
 	"github.com/tnypxl/rollup/internal/scraper"
+)
+
+var (
+	extractAndConvertContent func(string) (string, error)
 )
 
 func TestConvertPathOverrides(t *testing.T) {
