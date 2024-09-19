@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/tnypxl/rollup/internal/config"
 	"gopkg.in/yaml.v2"
 )
 
@@ -36,26 +37,30 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error walking the path: %v", err)
 	}
 
-	config := config.Config{
+	cfg := config.Config{
 		FileTypes: make([]string, 0, len(fileTypes)),
 		Ignore:    []string{"node_modules/**", "vendor/**", ".git/**"},
 	}
 
 	for ext := range fileTypes {
-		config.FileTypes = append(config.FileTypes, ext)
+		cfg.FileTypes = append(cfg.FileTypes, ext)
 	}
 
-	yamlData, err := yaml.Marshal(&config)
+	// Sort file types for consistency
+	sort.Strings(cfg.FileTypes)
+
+	yamlData, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling config: %v", err)
 	}
 
-	err = ioutil.WriteFile("rollup.yml", yamlData, 0644)
+	outputPath := config.DefaultConfigPath()
+	err = os.WriteFile(outputPath, yamlData, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing config file: %v", err)
 	}
 
-	fmt.Println("Generated rollup.yml file successfully.")
+	fmt.Printf("Generated %s file successfully.\n", outputPath)
 	return nil
 }
 
