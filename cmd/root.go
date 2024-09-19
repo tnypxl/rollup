@@ -159,7 +159,7 @@ func runRollup() error {
 
 	// Generate the output file name
 	timestamp := time.Now().Format("20060102-150405")
-	outputFileName := fmt.Sprintf("%s-rollup-%s.rollup.md", projectName, timestamp)
+	outputFileName := fmt.Sprintf("%s-%s.rollup.md", projectName, timestamp)
 
 	// Open the output file
 	outputFile, err := os.Create(outputFileName)
