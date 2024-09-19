@@ -52,7 +52,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
                 AllowedPaths:     site.AllowedPaths,
                 ExcludePaths:     site.ExcludePaths,
                 OutputAlias:      site.OutputAlias,
-                PathOverrides:    site.PathOverrides,
+                PathOverrides:    convertPathOverrides(site.PathOverrides),
             }
         }
     } else {
@@ -226,4 +226,16 @@ func sanitizeFilename(name string) string {
 	}
 
 	return name
+}
+
+func convertPathOverrides(configOverrides []config.PathOverride) []scraper.PathOverride {
+	scraperOverrides := make([]scraper.PathOverride, len(configOverrides))
+	for i, override := range configOverrides {
+		scraperOverrides[i] = scraper.PathOverride{
+			Path:             override.Path,
+			CSSLocator:       override.CSSLocator,
+			ExcludeSelectors: override.ExcludeSelectors,
+		}
+	}
+	return scraperOverrides
 }
