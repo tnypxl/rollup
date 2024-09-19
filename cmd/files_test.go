@@ -3,7 +3,10 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/yourusername/yourproject/internal/config"
 )
 
 func TestMatchGlob(t *testing.T) {
@@ -97,7 +100,7 @@ func TestRunRollup(t *testing.T) {
 	}
 
 	// Set up test configuration
-	cfg = &config.Config{
+	cfg = &Config{
 		FileTypes: []string{"go", "txt"},
 		Ignore:    []string{"*.json"},
 	}
