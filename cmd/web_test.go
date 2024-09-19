@@ -4,7 +4,6 @@ import (
 	"testing"
 	"strings"
 	"github.com/tnypxl/rollup/internal/config"
-	"github.com/tnypxl/rollup/internal/scraper"
 )
 
 func TestConvertPathOverrides(t *testing.T) {
