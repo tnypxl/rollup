@@ -72,9 +72,10 @@ func TestGetFilenameFromContent(t *testing.T) {
 		expected string
 	}{
 		{"<title>Test Page</title>", "http://example.com", "Test_Page.md"},
-		{"No title here", "http://example.com/page", "http___example_com_page.md"},
+		{"No title here", "http://example.com/page", "example_com_page.md"},
 		{"<title>  Trim  Me  </title>", "http://example.com", "Trim_Me.md"},
-		{"<title></title>", "http://example.com", "http___example_com.md"},
+		{"<title></title>", "http://example.com", "example_com.md"},
+		{"Invalid URL", "not a valid url", "untitled.md"},
 	}
 
 	for _, test := range tests {
