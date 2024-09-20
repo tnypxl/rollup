@@ -108,7 +108,7 @@ func writeMultipleFiles(content map[string]string) error {
 			return fmt.Errorf("error creating output file %s: %v", filename, err)
 		}
 
-		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s", url, c))
+		_, err = fmt.Fprintf(file, "# Content from %s\n\n%s", url, c)
 		file.Close()
 		if err != nil {
 			return fmt.Errorf("error writing content to file %s: %v", filename, err)
