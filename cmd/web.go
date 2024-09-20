@@ -82,7 +82,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
 }
 
 func writeSingleFile(content map[string]string) error {
-	outputFile := generateDefaultFilename(urls)
+	outputFile := generateDefaultFilename()
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return fmt.Errorf("error creating output file: %v", err)
@@ -90,7 +90,7 @@ func writeSingleFile(content map[string]string) error {
 	defer file.Close()
 
 	for url, c := range content {
-		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s\n\n---\n\n", url, c))
+		_, err = fmt.Fprintf(file, "# Content from %s\n\n%s\n\n---\n\n", url, c)
 		if err != nil {
 			return fmt.Errorf("error writing content to file: %v", err)
 		}
@@ -119,7 +119,7 @@ func writeMultipleFiles(content map[string]string) error {
 	return nil
 }
 
-func generateDefaultFilename(urls []string) string {
+func generateDefaultFilename() string {
 	timestamp := time.Now().Format("20060102-150405")
 	return fmt.Sprintf("web-%s.rollup.md", timestamp)
 }
