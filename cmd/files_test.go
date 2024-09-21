@@ -119,7 +119,9 @@ func TestRunRollup(t *testing.T) {
 		t.Fatalf("Failed to glob output files: %v", err)
 	}
 	if len(outputFiles) != 1 {
-		t.Fatalf("Expected 1 output file, got %d", len(outputFiles))
+		// List all files in the temp directory for debugging
+		files, _ := filepath.Glob(filepath.Join(tempDir, "*"))
+		t.Fatalf("Expected 1 output file, got %d. Files in directory: %v", len(outputFiles), files)
 	}
 
 	// Read the content of the output file

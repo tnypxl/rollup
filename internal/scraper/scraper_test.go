@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"reflect"
 )
 
 func TestIsAllowedURL(t *testing.T) {
