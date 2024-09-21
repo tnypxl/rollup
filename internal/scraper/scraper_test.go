@@ -144,6 +144,12 @@ This is a **test** paragraph.
 }
 
 func TestExtractLinks(t *testing.T) {
+	// Initialize the browser before running the test
+	if err := InitBrowser(); err != nil {
+		t.Fatalf("Failed to initialize browser: %v", err)
+	}
+	defer CloseBrowser()
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(`
