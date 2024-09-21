@@ -87,17 +87,31 @@ func runWeb(cmd *cobra.Command, args []string) error {
         return fmt.Errorf("no sites or URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.sites' in the rollup.yml file")
     }
 
+    // Set default values for rate limiting
+    defaultRequestsPerSecond := 1.0
+    defaultBurstLimit := 3
+
+    // Use default values if not set in the configuration
+    requestsPerSecond := cfg.Scrape.RequestsPerSecond
+    if requestsPerSecond == 0 {
+        requestsPerSecond = defaultRequestsPerSecond
+    }
+    burstLimit := cfg.Scrape.BurstLimit
+    if burstLimit == 0 {
+        burstLimit = defaultBurstLimit
+    }
+
     scraperConfig := scraper.Config{
         Sites:      siteConfigs,
         OutputType: outputType,
         Verbose:    verbose,
         Scrape: scraper.ScrapeConfig{
-            RequestsPerSecond: cfg.Scrape.RequestsPerSecond,
-            BurstLimit:        cfg.Scrape.BurstLimit,
+            RequestsPerSecond: requestsPerSecond,
+            BurstLimit:        burstLimit,
         },
     }
     logger.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d", 
-               outputType, cfg.Scrape.RequestsPerSecond, cfg.Scrape.BurstLimit)
+               outputType, requestsPerSecond, burstLimit)
 
     logger.Println("Starting scraping process")
     scrapedContent, err := scraper.ScrapeSites(scraperConfig)
