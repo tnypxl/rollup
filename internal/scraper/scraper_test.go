@@ -70,6 +70,9 @@ func TestGetOverrides(t *testing.T) {
 }
 
 func TestExtractContentWithCSS(t *testing.T) {
+	// Initialize logger for testing
+	logger = log.New(ioutil.Discard, "", 0)
+
 	html := `
 		<html>
 			<body>

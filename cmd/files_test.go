@@ -108,20 +108,15 @@ func TestRunRollup(t *testing.T) {
 	path = tempDir
 
 	// Run the rollup
-	err = runRollup()
+	outputFile, err := runRollup()
 	if err != nil {
 		t.Fatalf("runRollup() failed: %v", err)
 	}
 
 	// Check if the output file was created
-	outputFiles, err := filepath.Glob(filepath.Join(tempDir, "*.rollup.md"))
-	if err != nil {
-		t.Fatalf("Failed to glob output files: %v", err)
-	}
-	if len(outputFiles) != 1 {
-		// List all files in the temp directory for debugging
+	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
 		files, _ := filepath.Glob(filepath.Join(tempDir, "*"))
-		t.Fatalf("Expected 1 output file, got %d. Files in directory: %v", len(outputFiles), files)
+		t.Fatalf("Output file %s not found. Files in directory: %v", outputFile, files)
 	}
 
 	// Read the content of the output file
