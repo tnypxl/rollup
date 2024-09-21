@@ -59,7 +59,7 @@ type PathOverride struct {
 }
 
 func ScrapeSites(config Config) (map[string]string, error) {
-    logger.Println("Starting ScrapeSites function")
+    logger.Println("Starting ScrapeSites function - Verbose mode is active")
     results := make(chan struct {
         url     string
         content string
@@ -293,7 +293,7 @@ type URLConfig struct {
 // SetupLogger initializes the logger based on the verbose flag
 func SetupLogger(verbose bool) {
 	if verbose {
-		logger = log.New(log.Writer(), "SCRAPER: ", log.LstdFlags)
+		logger = log.New(os.Stdout, "SCRAPER: ", log.LstdFlags)
 	} else {
 		logger = log.New(ioutil.Discard, "", 0)
 	}
