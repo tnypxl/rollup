@@ -72,7 +72,10 @@ func ScrapeSites(config Config) (map[string]string, error) {
         wg.Add(1)
         go func(site SiteConfig) {
             defer wg.Done()
-            scrapeSite(site, config, results, limiter)
+            for _, path := range site.AllowedPaths {
+                fullURL := site.BaseURL + path
+                scrapeSingleURL(fullURL, site, config, results, limiter)
+            }
         }(site)
     }
 
@@ -91,6 +94,31 @@ func ScrapeSites(config Config) (map[string]string, error) {
     }
 
     return scrapedContent, nil
+}
+
+func scrapeSingleURL(url string, site SiteConfig, config Config, results chan<- struct {
+    url     string
+    content string
+    err     error
+}, limiter *rate.Limiter) {
+    // Wait for rate limiter before making the request
+    err := limiter.Wait(context.Background())
+    if err != nil {
+        results <- struct {
+            url     string
+            content string
+            err     error
+        }{url, "", fmt.Errorf("rate limiter error: %v", err)}
+        return
+    }
+
+    cssLocator, excludeSelectors := getOverrides(url, site)
+    content, err := scrapeURL(url, cssLocator, excludeSelectors)
+    results <- struct {
+        url     string
+        content string
+        err     error
+    }{url, content, err}
 }
 
 func scrapeSite(site SiteConfig, config Config, results chan<- struct {
