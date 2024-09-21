@@ -108,19 +108,20 @@ func TestRunRollup(t *testing.T) {
 	path = tempDir
 
 	// Run the rollup
-	outputFile, err := runRollup()
+	err = runRollup()
 	if err != nil {
 		t.Fatalf("runRollup() failed: %v", err)
 	}
 
 	// Check if the output file was created
+	outputFile := filepath.Join(tempDir, "rollup.md")
 	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
 		files, _ := filepath.Glob(filepath.Join(tempDir, "*"))
 		t.Fatalf("Output file %s not found. Files in directory: %v", outputFile, files)
 	}
 
 	// Read the content of the output file
-	content, err := os.ReadFile(outputFiles[0])
+	content, err := os.ReadFile(outputFile)
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}

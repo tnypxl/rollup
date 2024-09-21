@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"reflect"
+	"log"
+	"io/ioutil"
 )
 
 func TestIsAllowedURL(t *testing.T) {
