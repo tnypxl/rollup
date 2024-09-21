@@ -15,15 +15,27 @@ type Config struct {
 }
 
 type ScrapeConfig struct {
-	URLs       []URLConfig `yaml:"urls"`
-	OutputType string      `yaml:"output_type"`
+    Sites             []SiteConfig `yaml:"sites"`
+    OutputType        string       `yaml:"output_type"`
+    RequestsPerSecond float64      `yaml:"requests_per_second"`
+    BurstLimit        int          `yaml:"burst_limit"`
 }
 
-type URLConfig struct {
-	URL              string   `yaml:"url"`
-	CSSLocator       string   `yaml:"css_locator"`
-	ExcludeSelectors []string `yaml:"exclude_selectors"`
-	OutputAlias      string   `yaml:"output_alias"`
+type SiteConfig struct {
+    BaseURL          string            `yaml:"base_url"`
+    CSSLocator       string            `yaml:"css_locator"`
+    ExcludeSelectors []string          `yaml:"exclude_selectors"`
+    MaxDepth         int               `yaml:"max_depth"`
+    AllowedPaths     []string          `yaml:"allowed_paths"`
+    ExcludePaths     []string          `yaml:"exclude_paths"`
+    OutputAlias      string            `yaml:"output_alias"`
+    PathOverrides    []PathOverride    `yaml:"path_overrides"`
+}
+
+type PathOverride struct {
+    Path             string   `yaml:"path"`
+    CSSLocator       string   `yaml:"css_locator"`
+    ExcludeSelectors []string `yaml:"exclude_selectors"`
 }
 
 func Load(configPath string) (*Config, error) {

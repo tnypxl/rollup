@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"regexp"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/tnypxl/rollup/internal/config"
 	"github.com/tnypxl/rollup/internal/scraper"
 )
 
@@ -38,47 +41,93 @@ func init() {
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
-	scraperConfig.Verbose = verbose
+    scraper.SetupLogger(verbose)
+    logger := log.New(os.Stdout, "WEB: ", log.LstdFlags)
+    if !verbose {
+        logger.SetOutput(ioutil.Discard)
+    }
+    logger.Printf("Starting web scraping process with verbose mode: %v", verbose)
+    scraperConfig.Verbose = verbose
 
-	// Use config if available, otherwise use command-line flags
-	var urlConfigs []scraper.URLConfig
-	if len(urls) == 0 && len(cfg.Scrape.URLs) > 0 {
-		urlConfigs = make([]scraper.URLConfig, len(cfg.Scrape.URLs))
-		for i, u := range cfg.Scrape.URLs {
-			urlConfigs[i] = scraper.URLConfig{
-				URL:              u.URL,
-				CSSLocator:       u.CSSLocator,
-				ExcludeSelectors: u.ExcludeSelectors,
-				OutputAlias:      u.OutputAlias,
-			}
-		}
-	} else {
-		urlConfigs = make([]scraper.URLConfig, len(urls))
-		for i, u := range urls {
-			urlConfigs[i] = scraper.URLConfig{URL: u, CSSLocator: includeSelector}
-		}
-	}
+    var siteConfigs []scraper.SiteConfig
+    if len(cfg.Scrape.Sites) > 0 {
+        logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
+        siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
+        for i, site := range cfg.Scrape.Sites {
+            siteConfigs[i] = scraper.SiteConfig{
+                BaseURL:          site.BaseURL,
+                CSSLocator:       site.CSSLocator,
+                ExcludeSelectors: site.ExcludeSelectors,
+                MaxDepth:         site.MaxDepth,
+                AllowedPaths:     site.AllowedPaths,
+                ExcludePaths:     site.ExcludePaths,
+                OutputAlias:      site.OutputAlias,
+                PathOverrides:    convertPathOverrides(site.PathOverrides),
+            }
+            logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v",
+                       i+1, site.BaseURL, site.CSSLocator, site.MaxDepth, site.AllowedPaths)
+        }
+    } else {
+        logger.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
+        siteConfigs = make([]scraper.SiteConfig, len(urls))
+        for i, u := range urls {
+            siteConfigs[i] = scraper.SiteConfig{
+                BaseURL:          u,
+                CSSLocator:       includeSelector,
+                ExcludeSelectors: excludeSelectors,
+                MaxDepth:         depth,
+            }
+            logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d",
+                       i+1, u, includeSelector, depth)
+        }
+    }
 
-	if len(urlConfigs) == 0 {
-		return fmt.Errorf("no URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.urls' in the rollup.yml file")
-	}
+    if len(siteConfigs) == 0 {
+        logger.Println("Error: No sites or URLs provided")
+        return fmt.Errorf("no sites or URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.sites' in the rollup.yml file")
+    }
 
-	scraperConfig := scraper.Config{
-		URLs:       urlConfigs,
-		OutputType: outputType,
-		Verbose:    verbose,
-	}
+    // Set default values for rate limiting
+    defaultRequestsPerSecond := 1.0
+    defaultBurstLimit := 3
 
-	scrapedContent, err := scraper.ScrapeMultipleURLs(scraperConfig)
-	if err != nil {
-		return fmt.Errorf("error scraping content: %v", err)
-	}
+    // Use default values if not set in the configuration
+    requestsPerSecond := cfg.Scrape.RequestsPerSecond
+    if requestsPerSecond == 0 {
+        requestsPerSecond = defaultRequestsPerSecond
+    }
+    burstLimit := cfg.Scrape.BurstLimit
+    if burstLimit == 0 {
+        burstLimit = defaultBurstLimit
+    }
 
-	if outputType == "single" {
-		return writeSingleFile(scrapedContent)
-	} else {
-		return writeMultipleFiles(scrapedContent)
-	}
+    scraperConfig := scraper.Config{
+        Sites:      siteConfigs,
+        OutputType: outputType,
+        Verbose:    verbose,
+        Scrape: scraper.ScrapeConfig{
+            RequestsPerSecond: requestsPerSecond,
+            BurstLimit:        burstLimit,
+        },
+    }
+    logger.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d",
+               outputType, requestsPerSecond, burstLimit)
+
+    logger.Println("Starting scraping process")
+    scrapedContent, err := scraper.ScrapeSites(scraperConfig)
+    if err != nil {
+        logger.Printf("Error occurred during scraping: %v", err)
+        return fmt.Errorf("error scraping content: %v", err)
+    }
+    logger.Printf("Scraping completed. Total content scraped: %d", len(scrapedContent))
+
+    if outputType == "single" {
+        logger.Println("Writing content to a single file")
+        return writeSingleFile(scrapedContent)
+    } else {
+        logger.Println("Writing content to multiple files")
+        return writeMultipleFiles(scrapedContent)
+    }
 }
 
 func writeSingleFile(content map[string]string) error {
@@ -102,20 +151,26 @@ func writeSingleFile(content map[string]string) error {
 
 func writeMultipleFiles(content map[string]string) error {
 	for url, c := range content {
-		filename := getFilenameFromContent(c, url)
+		filename, err := getFilenameFromContent(c, url)
+		if err != nil {
+			return fmt.Errorf("error generating filename for %s: %v", url, err)
+		}
+
 		file, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("error creating output file %s: %v", filename, err)
 		}
 
-		_, err = fmt.Fprintf(file, "# Content from %s\n\n%s", url, c)
-		file.Close()
+		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s\n", url, c))
 		if err != nil {
+			file.Close()
 			return fmt.Errorf("error writing content to file %s: %v", filename, err)
 		}
 
+		file.Close()
 		fmt.Printf("Content from %s has been saved to %s\n", url, filename)
 	}
+
 	return nil
 }
 
@@ -136,13 +191,13 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 
 	visited[urlStr] = true
 
-	content, err := extractAndConvertContent(urlStr)
+	content, err := testExtractAndConvertContent(urlStr)
 	if err != nil {
 		return "", err
 	}
 
 	if depth > 0 {
-		links, err := scraper.ExtractLinks(urlStr)
+		links, err := testExtractLinks(urlStr)
 		if err != nil {
 			return content, fmt.Errorf("error extracting links: %v", err)
 		}
@@ -159,6 +214,9 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 
 	return content, nil
 }
+
+var testExtractAndConvertContent = extractAndConvertContent
+var testExtractLinks = scraper.ExtractLinks
 
 func extractAndConvertContent(urlStr string) (string, error) {
 	content, err := scraper.FetchWebpageContent(urlStr)
@@ -187,17 +245,32 @@ func extractAndConvertContent(urlStr string) (string, error) {
 	return header + markdown + "\n\n", nil
 }
 
-func getFilenameFromContent(content, url string) string {
+func getFilenameFromContent(content, urlStr string) (string, error) {
 	// Try to extract title from content
 	titleStart := strings.Index(content, "<title>")
 	titleEnd := strings.Index(content, "</title>")
 	if titleStart != -1 && titleEnd != -1 && titleEnd > titleStart {
-		title := content[titleStart+7 : titleEnd]
-		return sanitizeFilename(title) + ".md"
+		title := strings.TrimSpace(content[titleStart+7 : titleEnd])
+		if title != "" {
+			return sanitizeFilename(title) + ".rollup.md", nil
+		}
 	}
 
-	// If no title found, use the URL
-	return sanitizeFilename(url) + ".md"
+	// If no title found or title is empty, use the URL
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid URL: %v", err)
+	}
+
+	if parsedURL.Host == "" {
+		return "", fmt.Errorf("invalid URL: missing host")
+	}
+
+	filename := parsedURL.Host
+	if parsedURL.Path != "" && parsedURL.Path != "/" {
+		filename += strings.TrimSuffix(parsedURL.Path, "/")
+	}
+	return sanitizeFilename(filename) + ".rollup.md", nil
 }
 
 func sanitizeFilename(name string) string {
@@ -214,4 +287,16 @@ func sanitizeFilename(name string) string {
 	}
 
 	return name
+}
+
+func convertPathOverrides(configOverrides []config.PathOverride) []scraper.PathOverride {
+	scraperOverrides := make([]scraper.PathOverride, len(configOverrides))
+	for i, override := range configOverrides {
+		scraperOverrides[i] = scraper.PathOverride{
+			Path:             override.Path,
+			CSSLocator:       override.CSSLocator,
+			ExcludeSelectors: override.ExcludeSelectors,
+		}
+	}
+	return scraperOverrides
 }

@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.6.0
 	github.com/spf13/cobra v1.8.1
+	golang.org/x/time v0.6.0
 )
 
 require (

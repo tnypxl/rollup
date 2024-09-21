@@ -5,13 +5,18 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
+	"sync"
+	"context"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/playwright-community/playwright-go"
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"golang.org/x/time/rate"
 )
 
 var logger *log.Logger
@@ -23,57 +28,240 @@ var (
 
 // Config holds the scraper configuration
 type Config struct {
-	URLs       []URLConfig
+	Sites      []SiteConfig
 	OutputType string
 	Verbose    bool
+	Scrape     ScrapeConfig
 }
 
-// ScrapeMultipleURLs scrapes multiple URLs concurrently
-func ScrapeMultipleURLs(config Config) (map[string]string, error) {
-	results := make(chan struct {
-		url     string
-		content string
-		err     error
-	}, len(config.URLs))
-
-	for _, urlConfig := range config.URLs {
-		go func(cfg URLConfig) {
-			content, err := scrapeURL(cfg)
-			results <- struct {
-				url     string
-				content string
-				err     error
-			}{cfg.URL, content, err}
-		}(urlConfig)
-	}
-
-	scrapedContent := make(map[string]string)
-	for i := 0; i < len(config.URLs); i++ {
-		result := <-results
-		if result.err != nil {
-			logger.Printf("Error scraping %s: %v\n", result.url, result.err)
-			continue
-		}
-		scrapedContent[result.url] = result.content
-	}
-
-	return scrapedContent, nil
+// ScrapeConfig holds the scraping-specific configuration
+type ScrapeConfig struct {
+	RequestsPerSecond float64
+	BurstLimit        int
 }
 
-func scrapeURL(config URLConfig) (string, error) {
-	content, err := FetchWebpageContent(config.URL)
-	if err != nil {
-		return "", err
-	}
+// SiteConfig holds configuration for a single site
+type SiteConfig struct {
+	BaseURL          string
+	CSSLocator       string
+	ExcludeSelectors []string
+	MaxDepth         int
+	AllowedPaths     []string
+	ExcludePaths     []string
+	OutputAlias      string
+	PathOverrides    []PathOverride
+}
 
-	if config.CSSLocator != "" {
-		content, err = ExtractContentWithCSS(content, config.CSSLocator, config.ExcludeSelectors)
-		if err != nil {
-			return "", err
-		}
-	}
+// PathOverride holds path-specific overrides
+type PathOverride struct {
+	Path             string
+	CSSLocator       string
+	ExcludeSelectors []string
+}
 
-	return ProcessHTMLContent(content, Config{})
+func ScrapeSites(config Config) (map[string]string, error) {
+    logger.Println("Starting ScrapeSites function - Verbose mode is active")
+    results := make(chan struct {
+        url     string
+        content string
+        err     error
+    })
+
+    limiter := rate.NewLimiter(rate.Limit(config.Scrape.RequestsPerSecond), config.Scrape.BurstLimit)
+    logger.Printf("Rate limiter configured with %f requests per second and burst limit of %d\n", config.Scrape.RequestsPerSecond, config.Scrape.BurstLimit)
+
+    var wg sync.WaitGroup
+    totalURLs := 0
+    for _, site := range config.Sites {
+        logger.Printf("Processing site: %s\n", site.BaseURL)
+        wg.Add(1)
+        go func(site SiteConfig) {
+            defer wg.Done()
+            for _, path := range site.AllowedPaths {
+                fullURL := site.BaseURL + path
+                totalURLs++
+                logger.Printf("Queueing URL for scraping: %s\n", fullURL)
+                scrapeSingleURL(fullURL, site, config, results, limiter)
+            }
+        }(site)
+    }
+
+    go func() {
+        wg.Wait()
+        close(results)
+        logger.Println("All goroutines completed, results channel closed")
+    }()
+
+    scrapedContent := make(map[string]string)
+    for result := range results {
+        if result.err != nil {
+            logger.Printf("Error scraping %s: %v\n", result.url, result.err)
+            continue
+        }
+        logger.Printf("Successfully scraped content from %s (length: %d)\n", result.url, len(result.content))
+        scrapedContent[result.url] = result.content
+    }
+
+    logger.Printf("Total URLs processed: %d\n", totalURLs)
+    logger.Printf("Successfully scraped content from %d URLs\n", len(scrapedContent))
+
+    return scrapedContent, nil
+}
+
+func scrapeSingleURL(url string, site SiteConfig, config Config, results chan<- struct {
+    url     string
+    content string
+    err     error
+}, limiter *rate.Limiter) {
+    logger.Printf("Starting to scrape URL: %s\n", url)
+
+    // Wait for rate limiter before making the request
+    err := limiter.Wait(context.Background())
+    if err != nil {
+        logger.Printf("Rate limiter error for %s: %v\n", url, err)
+        results <- struct {
+            url     string
+            content string
+            err     error
+        }{url, "", fmt.Errorf("rate limiter error: %v", err)}
+        return
+    }
+
+    cssLocator, excludeSelectors := getOverrides(url, site)
+    logger.Printf("Using CSS locator for %s: %s\n", url, cssLocator)
+    logger.Printf("Exclude selectors for %s: %v\n", url, excludeSelectors)
+
+    content, err := scrapeURL(url, cssLocator, excludeSelectors)
+    if err != nil {
+        logger.Printf("Error scraping %s: %v\n", url, err)
+        results <- struct {
+            url     string
+            content string
+            err     error
+        }{url, "", err}
+        return
+    }
+
+    if content == "" {
+        logger.Printf("Warning: Empty content scraped from %s\n", url)
+    } else {
+        logger.Printf("Successfully scraped content from %s (length: %d)\n", url, len(content))
+    }
+
+    results <- struct {
+        url     string
+        content string
+        err     error
+    }{url, content, nil}
+}
+
+func scrapeSite(site SiteConfig, config Config, results chan<- struct {
+    url     string
+    content string
+    err     error
+}, limiter *rate.Limiter) {
+    visited := make(map[string]bool)
+    queue := []string{site.BaseURL}
+
+    for len(queue) > 0 {
+        url := queue[0]
+        queue = queue[1:]
+
+        if visited[url] {
+            continue
+        }
+        visited[url] = true
+
+        if !isAllowedURL(url, site) {
+            continue
+        }
+
+        // Wait for rate limiter before making the request
+        err := limiter.Wait(context.Background())
+        if err != nil {
+            results <- struct {
+                url     string
+                content string
+                err     error
+            }{url, "", fmt.Errorf("rate limiter error: %v", err)}
+            continue
+        }
+
+        cssLocator, excludeSelectors := getOverrides(url, site)
+        content, err := scrapeURL(url, cssLocator, excludeSelectors)
+        results <- struct {
+            url     string
+            content string
+            err     error
+        }{url, content, err}
+
+        if len(visited) < site.MaxDepth {
+            links, _ := ExtractLinks(url)
+            for _, link := range links {
+                if !visited[link] && isAllowedURL(link, site) {
+                    queue = append(queue, link)
+                }
+            }
+        }
+    }
+}
+
+func isAllowedURL(urlStr string, site SiteConfig) bool {
+    parsedURL, err := url.Parse(urlStr)
+    if err != nil {
+        return false
+    }
+
+    baseURL, _ := url.Parse(site.BaseURL)
+    if parsedURL.Host != baseURL.Host {
+        return false
+    }
+
+    path := parsedURL.Path
+    for _, allowedPath := range site.AllowedPaths {
+        if strings.HasPrefix(path, allowedPath) {
+            for _, excludePath := range site.ExcludePaths {
+                if strings.HasPrefix(path, excludePath) {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+
+    return false
+}
+
+func getOverrides(urlStr string, site SiteConfig) (string, []string) {
+    parsedURL, _ := url.Parse(urlStr)
+    path := parsedURL.Path
+
+    for _, override := range site.PathOverrides {
+        if strings.HasPrefix(path, override.Path) {
+            if override.CSSLocator != "" {
+                return override.CSSLocator, override.ExcludeSelectors
+            }
+            return site.CSSLocator, override.ExcludeSelectors
+        }
+    }
+
+    return site.CSSLocator, site.ExcludeSelectors
+}
+
+func scrapeURL(url, cssLocator string, excludeSelectors []string) (string, error) {
+    content, err := FetchWebpageContent(url)
+    if err != nil {
+        return "", err
+    }
+
+    if cssLocator != "" {
+        content, err = ExtractContentWithCSS(content, cssLocator, excludeSelectors)
+        if err != nil {
+            return "", err
+        }
+    }
+
+    return ProcessHTMLContent(content, Config{})
 }
 
 func getFilenameFromContent(content, url string) string {
@@ -106,7 +294,7 @@ type URLConfig struct {
 // SetupLogger initializes the logger based on the verbose flag
 func SetupLogger(verbose bool) {
 	if verbose {
-		logger = log.New(log.Writer(), "SCRAPER: ", log.LstdFlags)
+		logger = log.New(os.Stdout, "SCRAPER: ", log.LstdFlags)
 	} else {
 		logger = log.New(ioutil.Discard, "", 0)
 	}
