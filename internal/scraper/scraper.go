@@ -528,7 +528,9 @@ func ExtractLinks(urlStr string) ([]string, error) {
 
 	var result []string
 	for _, link := range links.([]interface{}) {
-		result = append(result, link.(string))
+		// Normalize URL by removing trailing slash
+		normalizedLink := strings.TrimRight(link.(string), "/")
+		result = append(result, normalizedLink)
 	}
 
 	logger.Printf("Extracted %d links\n", len(result))
@@ -561,6 +563,11 @@ func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []s
 	if err != nil {
 		return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
 	}
+
+	// Trim whitespace and normalize newlines
+	selectedContent = strings.TrimSpace(selectedContent)
+	selectedContent = strings.ReplaceAll(selectedContent, "\n", "")
+	selectedContent = strings.ReplaceAll(selectedContent, "\t", "")
 
 	logger.Printf("Extracted content length: %d\n", len(selectedContent))
 	return selectedContent, nil

@@ -114,11 +114,12 @@ func TestRunRollup(t *testing.T) {
 	}
 
 	// Check if the output file was created
-	outputFile := filepath.Join(tempDir, "rollup.md")
-	if _, err := os.Stat(outputFile); os.IsNotExist(err) {
-		files, _ := filepath.Glob(filepath.Join(tempDir, "*"))
-		t.Fatalf("Output file %s not found. Files in directory: %v", outputFile, files)
+	files, _ := filepath.Glob(filepath.Join(tempDir, "*.rollup.md"))
+	if len(files) == 0 {
+		allFiles, _ := filepath.Glob(filepath.Join(tempDir, "*"))
+		t.Fatalf("No rollup.md file found. Files in directory: %v", allFiles)
 	}
+	outputFile := files[0]
 
 	// Read the content of the output file
 	content, err := os.ReadFile(outputFile)
