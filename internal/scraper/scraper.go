@@ -68,12 +68,15 @@ func ScrapeSites(config Config) (map[string]string, error) {
     limiter := rate.NewLimiter(rate.Limit(config.Scrape.RequestsPerSecond), config.Scrape.BurstLimit)
 
     var wg sync.WaitGroup
+    totalURLs := 0
     for _, site := range config.Sites {
         wg.Add(1)
         go func(site SiteConfig) {
             defer wg.Done()
             for _, path := range site.AllowedPaths {
                 fullURL := site.BaseURL + path
+                totalURLs++
+                logger.Printf("Queueing URL for scraping: %s\n", fullURL)
                 scrapeSingleURL(fullURL, site, config, results, limiter)
             }
         }(site)
@@ -93,6 +96,9 @@ func ScrapeSites(config Config) (map[string]string, error) {
         scrapedContent[result.url] = result.content
     }
 
+    logger.Printf("Total URLs processed: %d\n", totalURLs)
+    logger.Printf("Successfully scraped content from %d URLs\n", len(scrapedContent))
+
     return scrapedContent, nil
 }
 
@@ -101,9 +107,12 @@ func scrapeSingleURL(url string, site SiteConfig, config Config, results chan<- 
     content string
     err     error
 }, limiter *rate.Limiter) {
+    logger.Printf("Scraping URL: %s\n", url)
+
     // Wait for rate limiter before making the request
     err := limiter.Wait(context.Background())
     if err != nil {
+        logger.Printf("Rate limiter error for %s: %v\n", url, err)
         results <- struct {
             url     string
             content string
@@ -113,12 +122,26 @@ func scrapeSingleURL(url string, site SiteConfig, config Config, results chan<- 
     }
 
     cssLocator, excludeSelectors := getOverrides(url, site)
+    logger.Printf("Using CSS locator: %s\n", cssLocator)
+    logger.Printf("Exclude selectors: %v\n", excludeSelectors)
+
     content, err := scrapeURL(url, cssLocator, excludeSelectors)
+    if err != nil {
+        logger.Printf("Error scraping %s: %v\n", url, err)
+        results <- struct {
+            url     string
+            content string
+            err     error
+        }{url, "", err}
+        return
+    }
+
+    logger.Printf("Successfully scraped content from %s (length: %d)\n", url, len(content))
     results <- struct {
         url     string
         content string
         err     error
-    }{url, content, err}
+    }{url, content, nil}
 }
 
 func scrapeSite(site SiteConfig, config Config, results chan<- struct {
