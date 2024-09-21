@@ -339,6 +339,16 @@ func ClosePlaywright() {
 	}
 }
 
+// InitBrowser initializes the browser
+func InitBrowser() error {
+	return InitPlaywright()
+}
+
+// CloseBrowser closes the browser
+func CloseBrowser() {
+	ClosePlaywright()
+}
+
 // FetchWebpageContent retrieves the content of a webpage using Playwright
 func FetchWebpageContent(urlStr string) (string, error) {
 	logger.Printf("Fetching webpage content for URL: %s\n", urlStr)

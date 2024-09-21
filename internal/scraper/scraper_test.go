@@ -144,11 +144,11 @@ This is a **test** paragraph.
 }
 
 func TestExtractLinks(t *testing.T) {
-	// Initialize the browser before running the test
-	if err := InitBrowser(); err != nil {
-		t.Fatalf("Failed to initialize browser: %v", err)
+	// Initialize Playwright before running the test
+	if err := InitPlaywright(); err != nil {
+		t.Fatalf("Failed to initialize Playwright: %v", err)
 	}
-	defer CloseBrowser()
+	defer ClosePlaywright()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
