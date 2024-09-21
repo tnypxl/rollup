@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"regexp"
@@ -40,12 +42,16 @@ func init() {
 
 func runWeb(cmd *cobra.Command, args []string) error {
     scraper.SetupLogger(verbose)
-    log.Printf("Starting web scraping process with verbose mode: %v", verbose)
+    logger := log.New(os.Stdout, "WEB: ", log.LstdFlags)
+    if !verbose {
+        logger.SetOutput(ioutil.Discard)
+    }
+    logger.Printf("Starting web scraping process with verbose mode: %v", verbose)
     scraperConfig.Verbose = verbose
 
     var siteConfigs []scraper.SiteConfig
     if len(cfg.Scrape.Sites) > 0 {
-        log.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
+        logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
         siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
         for i, site := range cfg.Scrape.Sites {
             siteConfigs[i] = scraper.SiteConfig{
@@ -58,11 +64,11 @@ func runWeb(cmd *cobra.Command, args []string) error {
                 OutputAlias:      site.OutputAlias,
                 PathOverrides:    convertPathOverrides(site.PathOverrides),
             }
-            log.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v", 
+            logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v", 
                        i+1, site.BaseURL, site.CSSLocator, site.MaxDepth, site.AllowedPaths)
         }
     } else {
-        log.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
+        logger.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
         siteConfigs = make([]scraper.SiteConfig, len(urls))
         for i, u := range urls {
             siteConfigs[i] = scraper.SiteConfig{
@@ -71,13 +77,13 @@ func runWeb(cmd *cobra.Command, args []string) error {
                 ExcludeSelectors: excludeSelectors,
                 MaxDepth:         depth,
             }
-            log.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d", 
+            logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d", 
                        i+1, u, includeSelector, depth)
         }
     }
 
     if len(siteConfigs) == 0 {
-        log.Println("Error: No sites or URLs provided")
+        logger.Println("Error: No sites or URLs provided")
         return fmt.Errorf("no sites or URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.sites' in the rollup.yml file")
     }
 
@@ -90,22 +96,22 @@ func runWeb(cmd *cobra.Command, args []string) error {
             BurstLimit:        cfg.Scrape.BurstLimit,
         },
     }
-    log.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d", 
+    logger.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d", 
                outputType, cfg.Scrape.RequestsPerSecond, cfg.Scrape.BurstLimit)
 
-    log.Println("Starting scraping process")
+    logger.Println("Starting scraping process")
     scrapedContent, err := scraper.ScrapeSites(scraperConfig)
     if err != nil {
-        log.Printf("Error occurred during scraping: %v", err)
+        logger.Printf("Error occurred during scraping: %v", err)
         return fmt.Errorf("error scraping content: %v", err)
     }
-    log.Printf("Scraping completed. Total content scraped: %d", len(scrapedContent))
+    logger.Printf("Scraping completed. Total content scraped: %d", len(scrapedContent))
 
     if outputType == "single" {
-        log.Println("Writing content to a single file")
+        logger.Println("Writing content to a single file")
         return writeSingleFile(scrapedContent)
     } else {
-        log.Println("Writing content to multiple files")
+        logger.Println("Writing content to multiple files")
         return writeMultipleFiles(scrapedContent)
     }
 }
