@@ -39,6 +39,7 @@ func init() {
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
+    scraper.SetupLogger(verbose)
     log.Printf("Starting web scraping process with verbose mode: %v", verbose)
     scraperConfig.Verbose = verbose
 
