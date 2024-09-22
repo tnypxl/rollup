@@ -76,14 +76,27 @@ ignore:
 code_generated:
   - **/generated/**
 scrape:
-  urls:
-    - url: https://example.com
+  sites:
+    - base_url: https://example.com
       css_locator: .content
       exclude_selectors:
         - .ads
         - .navigation
+      max_depth: 2
+      allowed_paths:
+        - /blog
+        - /docs
+      exclude_paths:
+        - /admin
       output_alias: example
+      path_overrides:
+        - path: /special-page
+          css_locator: .special-content
+          exclude_selectors:
+            - .special-ads
   output_type: single
+  requests_per_second: 1.0
+  burst_limit: 3
 ```
 
 ## Examples
