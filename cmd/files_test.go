@@ -21,6 +21,9 @@ func TestMatchGlob(t *testing.T) {
 		{"**/*.go", "dir/subdir/file.go", true},
 		{"dir/*.go", "dir/file.go", true},
 		{"dir/*.go", "otherdir/file.go", false},
+		{"**/test_*.go", "internal/test_helper.go", true},
+		{"docs/**/*.md", "docs/api/endpoints.md", true},
+		{"docs/**/*.md", "src/docs/readme.md", false},
 	}
 
 	for _, test := range tests {
@@ -32,7 +35,7 @@ func TestMatchGlob(t *testing.T) {
 }
 
 func TestIsCodeGenerated(t *testing.T) {
-	patterns := []string{"generated_*.go", "**/auto_*.go"}
+	patterns := []string{"generated_*.go", "**/auto_*.go", "**/*_gen.go"}
 	tests := []struct {
 		path     string
 		expected bool
@@ -41,6 +44,8 @@ func TestIsCodeGenerated(t *testing.T) {
 		{"normal_file.go", false},
 		{"subdir/auto_file.go", true},
 		{"subdir/normal_file.go", false},
+		{"pkg/models_gen.go", true},
+		{"pkg/handler.go", false},
 	}
 
 	for _, test := range tests {
@@ -52,7 +57,7 @@ func TestIsCodeGenerated(t *testing.T) {
 }
 
 func TestIsIgnored(t *testing.T) {
-	patterns := []string{"*.tmp", "**/*.log"}
+	patterns := []string{"*.tmp", "**/*.log", ".git/**", "vendor/**"}
 	tests := []struct {
 		path     string
 		expected bool
@@ -61,6 +66,10 @@ func TestIsIgnored(t *testing.T) {
 		{"file.go", false},
 		{"subdir/file.log", true},
 		{"subdir/file.txt", false},
+		{".git/config", true},
+		{"src/.git/config", true},
+		{"vendor/package/file.go", true},
+		{"internal/vendor/file.go", false},
 	}
 
 	for _, test := range tests {
@@ -81,10 +90,14 @@ func TestRunRollup(t *testing.T) {
 
 	// Create some test files
 	files := map[string]string{
-		"file1.go":          "package main\n\nfunc main() {}\n",
-		"file2.txt":         "This is a text file.\n",
-		"subdir/file3.go":   "package subdir\n\nfunc Func() {}\n",
-		"subdir/file4.json": "{\"key\": \"value\"}\n",
+		"file1.go":             "package main\n\nfunc main() {}\n",
+		"file2.txt":            "This is a text file.\n",
+		"subdir/file3.go":      "package subdir\n\nfunc Func() {}\n",
+		"subdir/file4.json":    "{\"key\": \"value\"}\n",
+		"generated_model.go":   "// Code generated DO NOT EDIT.\n\npackage model\n",
+		"docs/api/readme.md":   "# API Documentation\n",
+		".git/config":          "[core]\n\trepositoryformatversion = 0\n",
+		"vendor/lib/helper.go": "package lib\n\nfunc Helper() {}\n",
 	}
 
 	for name, content := range files {
@@ -98,11 +111,16 @@ func TestRunRollup(t *testing.T) {
 	}
 
 	// Set up test configuration
-	cfg := &config.Config{
-		FileTypes:     []string{"go", "txt"},
-		Ignore:        []string{"*.json"},
-		CodeGenerated: []string{},
+	cfg = &config.Config{
+		FileTypes:     []string{"go", "txt", "md"},
+		Ignore:        []string{"*.json", ".git/**", "vendor/**"},
+		CodeGenerated: []string{"generated_*.go"},
 	}
+
+	// Change working directory to the temp directory
+	originalWd, _ := os.Getwd()
+	os.Chdir(tempDir)
+	defer os.Chdir(originalWd)
 
 	// Run the rollup
 	if err := runRollup(); err != nil {
@@ -110,12 +128,12 @@ func TestRunRollup(t *testing.T) {
 	}
 
 	// Check if the output file was created
-	outputFiles, err := filepath.Glob(filepath.Join(tempDir, "*.rollup.md"))
+	outputFiles, err := filepath.Glob("*.rollup.md")
 	if err != nil {
 		t.Fatalf("Error globbing for output file: %v", err)
 	}
 	if len(outputFiles) == 0 {
-		allFiles, _ := filepath.Glob(filepath.Join(tempDir, "*"))
+		allFiles, _ := filepath.Glob("*")
 		t.Fatalf("No rollup.md file found. Files in directory: %v", allFiles)
 	}
 	outputFile := outputFiles[0]
@@ -131,6 +149,8 @@ func TestRunRollup(t *testing.T) {
 		"# File: file1.go",
 		"# File: file2.txt",
 		"# File: subdir/file3.go",
+		"# File: docs/api/readme.md",
+		"# File: generated_model.go (Code-generated, Read-only)",
 	}
 	for _, expected := range expectedContent {
 		if !strings.Contains(string(content), expected) {
@@ -138,8 +158,15 @@ func TestRunRollup(t *testing.T) {
 		}
 	}
 
-	// Check if the ignored file is not included
-	if strings.Contains(string(content), "file4.json") {
-		t.Errorf("Output file contains ignored file: file4.json")
+	// Check if the ignored files are not included
+	ignoredContent := []string{
+		"file4.json",
+		".git/config",
+		"vendor/lib/helper.go",
+	}
+	for _, ignored := range ignoredContent {
+		if strings.Contains(string(content), ignored) {
+			t.Errorf("Output file contains ignored file: %s", ignored)
+		}
 	}
 }
