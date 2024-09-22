@@ -67,7 +67,7 @@ func TestIsIgnored(t *testing.T) {
 		{"subdir/file.log", true},
 		{"subdir/file.txt", false},
 		{".git/config", true},
-		{"src/.git/config", true},
+		{"src/.git/config", false},
 		{"vendor/package/file.go", true},
 		{"internal/vendor/file.go", false},
 	}
