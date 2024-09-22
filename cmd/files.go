@@ -8,7 +8,10 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/tnypxl/rollup/internal/config"
 )
+
+var cfg *config.Config
 
 var (
 	path            string
@@ -103,21 +106,21 @@ func isIgnored(filePath string, patterns []string) bool {
 	return false
 }
 
-func runRollup(config *config.Config) error {
+func runRollup(cfg *config.Config) error {
 	// Use config if available, otherwise use command-line flags
 	var types, codeGenList, ignoreList []string
-	if config != nil && len(config.FileTypes) > 0 {
-		types = config.FileTypes
+	if cfg != nil && len(cfg.FileTypes) > 0 {
+		types = cfg.FileTypes
 	} else {
 		types = strings.Split(fileTypes, ",")
 	}
-	if config != nil && len(config.CodeGenerated) > 0 {
-		codeGenList = config.CodeGenerated
+	if cfg != nil && len(cfg.CodeGenerated) > 0 {
+		codeGenList = cfg.CodeGenerated
 	} else {
 		codeGenList = strings.Split(codeGenPatterns, ",")
 	}
-	if config != nil && config.Ignore != nil && len(config.Ignore) > 0 {
-		ignoreList = config.Ignore
+	if cfg != nil && cfg.Ignore != nil && len(cfg.Ignore) > 0 {
+		ignoreList = cfg.Ignore
 	} else {
 		ignoreList = strings.Split(ignorePatterns, ",")
 	}
