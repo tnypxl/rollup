@@ -564,12 +564,19 @@ func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []s
 		return "", fmt.Errorf("error extracting content with CSS selector: %v", err)
 	}
 
-	// Trim leading and trailing whitespace, but preserve internal newlines
+	// Trim leading and trailing whitespace
 	selectedContent = strings.TrimSpace(selectedContent)
 
 	// Normalize newlines
 	selectedContent = strings.ReplaceAll(selectedContent, "\r\n", "\n")
 	selectedContent = strings.ReplaceAll(selectedContent, "\r", "\n")
+
+	// Remove indentation while preserving structure
+	lines := strings.Split(selectedContent, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSpace(line)
+	}
+	selectedContent = strings.Join(lines, "\n")
 
 	// Remove any leading or trailing newlines
 	selectedContent = strings.Trim(selectedContent, "\n")
