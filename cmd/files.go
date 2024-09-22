@@ -24,7 +24,7 @@ var filesCmd = &cobra.Command{
 in a given project, current path or a custom path, to a single timestamped markdown file
 whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runRollup()
+		return runRollup(cfg)
 	},
 }
 
@@ -103,21 +103,21 @@ func isIgnored(filePath string, patterns []string) bool {
 	return false
 }
 
-func runRollup() error {
+func runRollup(config *config.Config) error {
 	// Use config if available, otherwise use command-line flags
 	var types, codeGenList, ignoreList []string
-	if cfg != nil && len(cfg.FileTypes) > 0 {
-		types = cfg.FileTypes
+	if config != nil && len(config.FileTypes) > 0 {
+		types = config.FileTypes
 	} else {
 		types = strings.Split(fileTypes, ",")
 	}
-	if cfg != nil && len(cfg.CodeGenerated) > 0 {
-		codeGenList = cfg.CodeGenerated
+	if config != nil && len(config.CodeGenerated) > 0 {
+		codeGenList = config.CodeGenerated
 	} else {
 		codeGenList = strings.Split(codeGenPatterns, ",")
 	}
-	if cfg != nil && cfg.Ignore != nil && len(cfg.Ignore) > 0 {
-		ignoreList = cfg.Ignore
+	if config != nil && config.Ignore != nil && len(config.Ignore) > 0 {
+		ignoreList = config.Ignore
 	} else {
 		ignoreList = strings.Split(ignorePatterns, ",")
 	}

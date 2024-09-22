@@ -123,7 +123,7 @@ func TestRunRollup(t *testing.T) {
 	defer os.Chdir(originalWd)
 
 	// Run the rollup
-	if err := runRollup(); err != nil {
+	if err := runRollup(cfg); err != nil {
 		t.Fatalf("runRollup() failed: %v", err)
 	}
 
