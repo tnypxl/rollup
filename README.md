@@ -4,16 +4,18 @@ Rollup aggregates the contents of text-based files and webpages into a markdown 
 
 ## Features
 
-- File type filtering
-- Ignore patterns for excluding files
-- Support for code-generated file detection
-- Advanced web scraping functionality
-- Verbose logging option for detailed output
-- Exclusionary CSS selectors for web scraping
-- Support for multiple URLs in web scraping
+- File type filtering for targeted content aggregation
+- Ignore patterns for excluding specific files or directories
+- Support for code-generated file detection and exclusion
+- Advanced web scraping functionality with depth control
+- Verbose logging option for detailed operation insights
+- Exclusionary CSS selectors for precise web content extraction
+- Support for multiple URLs in web scraping operations
 - Configurable output format for web scraping (single file or separate files)
-- Configuration file support (YAML)
-- Generation of default configuration file
+- Flexible configuration file support (YAML)
+- Automatic generation of default configuration file
+- Custom output file naming
+- Concurrent processing for improved performance
 
 ## Installation
 
@@ -43,6 +45,8 @@ rollup [command] [flags]
 - `--types, -t`: Comma-separated list of file extensions to include (default: .go,.md,.txt)
 - `--codegen, -g`: Comma-separated list of glob patterns for code-generated files
 - `--ignore, -i`: Comma-separated list of glob patterns for files to ignore
+- `--output, -o`: Name of the output file (default: rollup_output.md)
+- `--concurrent, -c`: Number of concurrent goroutines for processing (default: 4)
 
 ### Flags for `web` command
 
@@ -51,11 +55,13 @@ rollup [command] [flags]
 - `--depth, -d`: Depth of link traversal (default: 0, only scrape the given URLs)
 - `--css`: CSS selector to extract specific content
 - `--exclude`: CSS selectors to exclude from the extracted content (comma-separated)
+- `--concurrent, -c`: Number of concurrent goroutines for processing (default: 4)
 
 ### Global flags
 
 - `--config, -f`: Path to the configuration file (default: rollup.yml in the current directory)
 - `--verbose, -v`: Enable verbose logging
+- `--timeout, -t`: Timeout for web requests in seconds (default: 30)
 
 ## Configuration
 
@@ -92,10 +98,10 @@ scrape:
    rollup files
    ```
 
-2. Web scraping with multiple URLs:
+2. Web scraping with multiple URLs and increased concurrency:
 
    ```bash
-   rollup web --urls=https://example.com,https://another-example.com
+   rollup web --urls=https://example.com,https://another-example.com --concurrent=8
    ```
 
 3. Generate a default configuration file:
@@ -104,15 +110,25 @@ scrape:
    rollup generate
    ```
 
-4. Use a custom configuration file:
+4. Use a custom configuration file and specify output:
 
    ```bash
-   rollup files --config=my-config.yml
+   rollup files --config=my-config.yml --output=project_summary.md
    ```
 
-5. Web scraping with separate output files:
+5. Web scraping with separate output files and custom timeout:
    ```bash
-   rollup web --urls=https://example.com,https://another-example.com --output=separate
+   rollup web --urls=https://example.com,https://another-example.com --output=separate --timeout=60
+   ```
+
+6. Rollup files with specific types and ignore patterns:
+   ```bash
+   rollup files --types=.go,.md --ignore=vendor/**,*_test.go
+   ```
+
+7. Web scraping with depth and CSS selector:
+   ```bash
+   rollup web --urls=https://example.com --depth=2 --css=.main-content
    ```
 
 ## Contributing
