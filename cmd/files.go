@@ -87,11 +87,14 @@ func isIgnored(filePath string, patterns []string) bool {
 				return true
 			}
 		} else {
-			// Check if the pattern matches any part of the file path
+			// Check if the pattern matches the full path or any part of it
+			if matched, _ := filepath.Match(pattern, filePath); matched {
+				return true
+			}
 			pathParts := strings.Split(filePath, string(os.PathSeparator))
-			for _, part := range pathParts {
-				matched, err := filepath.Match(pattern, part)
-				if err == nil && matched {
+			for i := range pathParts {
+				partialPath := filepath.Join(pathParts[:i+1]...)
+				if matched, _ := filepath.Match(pattern, partialPath); matched {
 					return true
 				}
 			}
