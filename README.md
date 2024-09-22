@@ -45,8 +45,6 @@ rollup [command] [flags]
 - `--types, -t`: Comma-separated list of file extensions to include (default: .go,.md,.txt)
 - `--codegen, -g`: Comma-separated list of glob patterns for code-generated files
 - `--ignore, -i`: Comma-separated list of glob patterns for files to ignore
-- `--output, -o`: Name of the output file (default: rollup_output.md)
-- `--concurrent, -c`: Number of concurrent goroutines for processing (default: 4)
 
 ### Flags for `web` command
 
@@ -55,13 +53,11 @@ rollup [command] [flags]
 - `--depth, -d`: Depth of link traversal (default: 0, only scrape the given URLs)
 - `--css`: CSS selector to extract specific content
 - `--exclude`: CSS selectors to exclude from the extracted content (comma-separated)
-- `--concurrent, -c`: Number of concurrent goroutines for processing (default: 4)
 
 ### Global flags
 
 - `--config, -f`: Path to the configuration file (default: rollup.yml in the current directory)
 - `--verbose, -v`: Enable verbose logging
-- `--timeout, -t`: Timeout for web requests in seconds (default: 30)
 
 ## Configuration
 
