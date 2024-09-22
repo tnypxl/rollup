@@ -7,7 +7,6 @@ import (
 
 var (
 	configFile string
-	cfg        *config.Config
 	verbose    bool
 )
 
@@ -19,10 +18,10 @@ Use subcommands to perform specific operations.`,
 }
 
 func Execute(conf *config.Config) error {
-	cfg = conf
-	if cfg == nil {
-		cfg = &config.Config{} // Use an empty config if none is provided
+	if conf == nil {
+		conf = &config.Config{} // Use an empty config if none is provided
 	}
+	cfg = conf // Set the cfg variable in cmd/files.go
 	return rootCmd.Execute()
 }
 
