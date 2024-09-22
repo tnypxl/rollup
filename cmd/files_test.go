@@ -89,37 +89,36 @@ func TestRunRollup(t *testing.T) {
 
 	for name, content := range files {
 		path := filepath.Join(tempDir, name)
-		err := os.MkdirAll(filepath.Dir(path), 0755)
-		if err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatalf("Failed to create directory: %v", err)
 		}
-		err = os.WriteFile(path, []byte(content), 0644)
-		if err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatalf("Failed to write file: %v", err)
 		}
 	}
 
 	// Set up test configuration
-	cfg = &config.Config{
+	cfg := &config.Config{
 		FileTypes:     []string{"go", "txt"},
 		Ignore:        []string{"*.json"},
 		CodeGenerated: []string{},
 	}
-	path = tempDir
 
 	// Run the rollup
-	err = runRollup()
-	if err != nil {
+	if err := runRollup(); err != nil {
 		t.Fatalf("runRollup() failed: %v", err)
 	}
 
 	// Check if the output file was created
-	files, _ := filepath.Glob(filepath.Join(tempDir, "*.rollup.md"))
-	if len(files) == 0 {
+	outputFiles, err := filepath.Glob(filepath.Join(tempDir, "*.rollup.md"))
+	if err != nil {
+		t.Fatalf("Error globbing for output file: %v", err)
+	}
+	if len(outputFiles) == 0 {
 		allFiles, _ := filepath.Glob(filepath.Join(tempDir, "*"))
 		t.Fatalf("No rollup.md file found. Files in directory: %v", allFiles)
 	}
-	outputFile := files[0]
+	outputFile := outputFiles[0]
 
 	// Read the content of the output file
 	content, err := os.ReadFile(outputFile)
