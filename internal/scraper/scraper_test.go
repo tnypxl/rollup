@@ -1,13 +1,13 @@
 package scraper
 
 import (
-	"testing"
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"reflect"
-	"log"
-	"io/ioutil"
+	"strings"
+	"testing"
 )
 
 func TestIsAllowedURL(t *testing.T) {
@@ -51,9 +51,9 @@ func TestGetOverrides(t *testing.T) {
 	}
 
 	tests := []struct {
-		url               string
-		expectedLocator   string
-		expectedExcludes  []string
+		url              string
+		expectedLocator  string
+		expectedExcludes []string
 	}{
 		{"https://example.com/normal", "main", []string{".ads"}},
 		{"https://example.com/special", ".special-content", []string{".sidebar"}},
@@ -73,7 +73,7 @@ func TestGetOverrides(t *testing.T) {
 
 func TestExtractContentWithCSS(t *testing.T) {
 	// Initialize logger for testing
-	logger = log.New(ioutil.Discard, "", 0)
+	logger = log.New(io.Discard, "", 0)
 
 	html := `
 		<html>

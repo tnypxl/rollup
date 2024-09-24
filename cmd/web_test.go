@@ -103,7 +103,7 @@ func mockExtractAndConvertContent(urlStr string) (string, error) {
 	return "Mocked content for " + urlStr, nil
 }
 
-func mockExtractLinks(urlStr string) ([]string, error) {
+func mockExtractLinks() ([]string, error) {
 	return []string{"http://example.com/link1", "http://example.com/link2"}, nil
 }
 

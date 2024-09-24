@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/url"
 	"os"
@@ -41,93 +41,93 @@ func init() {
 }
 
 func runWeb(cmd *cobra.Command, args []string) error {
-    scraper.SetupLogger(verbose)
-    logger := log.New(os.Stdout, "WEB: ", log.LstdFlags)
-    if !verbose {
-        logger.SetOutput(ioutil.Discard)
-    }
-    logger.Printf("Starting web scraping process with verbose mode: %v", verbose)
-    scraperConfig.Verbose = verbose
+	scraper.SetupLogger(verbose)
+	logger := log.New(os.Stdout, "WEB: ", log.LstdFlags)
+	if !verbose {
+		logger.SetOutput(io.Discard)
+	}
+	logger.Printf("Starting web scraping process with verbose mode: %v", verbose)
+	scraperConfig.Verbose = verbose
 
-    var siteConfigs []scraper.SiteConfig
-    if len(cfg.Scrape.Sites) > 0 {
-        logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
-        siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
-        for i, site := range cfg.Scrape.Sites {
-            siteConfigs[i] = scraper.SiteConfig{
-                BaseURL:          site.BaseURL,
-                CSSLocator:       site.CSSLocator,
-                ExcludeSelectors: site.ExcludeSelectors,
-                MaxDepth:         site.MaxDepth,
-                AllowedPaths:     site.AllowedPaths,
-                ExcludePaths:     site.ExcludePaths,
-                OutputAlias:      site.OutputAlias,
-                PathOverrides:    convertPathOverrides(site.PathOverrides),
-            }
-            logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v",
-                       i+1, site.BaseURL, site.CSSLocator, site.MaxDepth, site.AllowedPaths)
-        }
-    } else {
-        logger.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
-        siteConfigs = make([]scraper.SiteConfig, len(urls))
-        for i, u := range urls {
-            siteConfigs[i] = scraper.SiteConfig{
-                BaseURL:          u,
-                CSSLocator:       includeSelector,
-                ExcludeSelectors: excludeSelectors,
-                MaxDepth:         depth,
-            }
-            logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d",
-                       i+1, u, includeSelector, depth)
-        }
-    }
+	var siteConfigs []scraper.SiteConfig
+	if len(cfg.Scrape.Sites) > 0 {
+		logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
+		siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
+		for i, site := range cfg.Scrape.Sites {
+			siteConfigs[i] = scraper.SiteConfig{
+				BaseURL:          site.BaseURL,
+				CSSLocator:       site.CSSLocator,
+				ExcludeSelectors: site.ExcludeSelectors,
+				MaxDepth:         site.MaxDepth,
+				AllowedPaths:     site.AllowedPaths,
+				ExcludePaths:     site.ExcludePaths,
+				OutputAlias:      site.OutputAlias,
+				PathOverrides:    convertPathOverrides(site.PathOverrides),
+			}
+			logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v",
+				i+1, site.BaseURL, site.CSSLocator, site.MaxDepth, site.AllowedPaths)
+		}
+	} else {
+		logger.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
+		siteConfigs = make([]scraper.SiteConfig, len(urls))
+		for i, u := range urls {
+			siteConfigs[i] = scraper.SiteConfig{
+				BaseURL:          u,
+				CSSLocator:       includeSelector,
+				ExcludeSelectors: excludeSelectors,
+				MaxDepth:         depth,
+			}
+			logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d",
+				i+1, u, includeSelector, depth)
+		}
+	}
 
-    if len(siteConfigs) == 0 {
-        logger.Println("Error: No sites or URLs provided")
-        return fmt.Errorf("no sites or URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.sites' in the rollup.yml file")
-    }
+	if len(siteConfigs) == 0 {
+		logger.Println("Error: No sites or URLs provided")
+		return fmt.Errorf("no sites or URLs provided. Use --urls flag with comma-separated URLs or set 'scrape.sites' in the rollup.yml file")
+	}
 
-    // Set default values for rate limiting
-    defaultRequestsPerSecond := 1.0
-    defaultBurstLimit := 3
+	// Set default values for rate limiting
+	defaultRequestsPerSecond := 1.0
+	defaultBurstLimit := 3
 
-    // Use default values if not set in the configuration
-    requestsPerSecond := cfg.Scrape.RequestsPerSecond
-    if requestsPerSecond == 0 {
-        requestsPerSecond = defaultRequestsPerSecond
-    }
-    burstLimit := cfg.Scrape.BurstLimit
-    if burstLimit == 0 {
-        burstLimit = defaultBurstLimit
-    }
+	// Use default values if not set in the configuration
+	requestsPerSecond := cfg.Scrape.RequestsPerSecond
+	if requestsPerSecond == 0 {
+		requestsPerSecond = defaultRequestsPerSecond
+	}
+	burstLimit := cfg.Scrape.BurstLimit
+	if burstLimit == 0 {
+		burstLimit = defaultBurstLimit
+	}
 
-    scraperConfig := scraper.Config{
-        Sites:      siteConfigs,
-        OutputType: outputType,
-        Verbose:    verbose,
-        Scrape: scraper.ScrapeConfig{
-            RequestsPerSecond: requestsPerSecond,
-            BurstLimit:        burstLimit,
-        },
-    }
-    logger.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d",
-               outputType, requestsPerSecond, burstLimit)
+	scraperConfig := scraper.Config{
+		Sites:      siteConfigs,
+		OutputType: outputType,
+		Verbose:    verbose,
+		Scrape: scraper.ScrapeConfig{
+			RequestsPerSecond: requestsPerSecond,
+			BurstLimit:        burstLimit,
+		},
+	}
+	logger.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d",
+		outputType, requestsPerSecond, burstLimit)
 
-    logger.Println("Starting scraping process")
-    scrapedContent, err := scraper.ScrapeSites(scraperConfig)
-    if err != nil {
-        logger.Printf("Error occurred during scraping: %v", err)
-        return fmt.Errorf("error scraping content: %v", err)
-    }
-    logger.Printf("Scraping completed. Total content scraped: %d", len(scrapedContent))
+	logger.Println("Starting scraping process")
+	scrapedContent, err := scraper.ScrapeSites(scraperConfig)
+	if err != nil {
+		logger.Printf("Error occurred during scraping: %v", err)
+		return fmt.Errorf("error scraping content: %v", err)
+	}
+	logger.Printf("Scraping completed. Total content scraped: %d", len(scrapedContent))
 
-    if outputType == "single" {
-        logger.Println("Writing content to a single file")
-        return writeSingleFile(scrapedContent)
-    } else {
-        logger.Println("Writing content to multiple files")
-        return writeMultipleFiles(scrapedContent)
-    }
+	if outputType == "single" {
+		logger.Println("Writing content to a single file")
+		return writeSingleFile(scrapedContent)
+	} else {
+		logger.Println("Writing content to multiple files")
+		return writeMultipleFiles(scrapedContent)
+	}
 }
 
 func writeSingleFile(content map[string]string) error {
@@ -139,7 +139,7 @@ func writeSingleFile(content map[string]string) error {
 	defer file.Close()
 
 	for url, c := range content {
-		_, err = fmt.Fprintf(file, "# Content from %s\n\n%s\n\n---\n\n", url, c)
+		_, err = fmt.Fprintf(file, "# ::: Content from %s\n\n%s\n\n---\n\n", url, c)
 		if err != nil {
 			return fmt.Errorf("error writing content to file: %v", err)
 		}
@@ -161,7 +161,7 @@ func writeMultipleFiles(content map[string]string) error {
 			return fmt.Errorf("error creating output file %s: %v", filename, err)
 		}
 
-		_, err = file.WriteString(fmt.Sprintf("# Content from %s\n\n%s\n", url, c))
+		_, err = file.WriteString(fmt.Sprintf("# ::: Content from %s\n\n%s\n", url, c))
 		if err != nil {
 			file.Close()
 			return fmt.Errorf("error writing content to file %s: %v", filename, err)
@@ -215,8 +215,10 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 	return content, nil
 }
 
-var testExtractAndConvertContent = extractAndConvertContent
-var testExtractLinks = scraper.ExtractLinks
+var (
+	testExtractAndConvertContent = extractAndConvertContent
+	testExtractLinks             = scraper.ExtractLinks
+)
 
 func extractAndConvertContent(urlStr string) (string, error) {
 	content, err := scraper.FetchWebpageContent(urlStr)
@@ -240,7 +242,7 @@ func extractAndConvertContent(urlStr string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error parsing URL: %v", err)
 	}
-	header := fmt.Sprintf("# Content from %s\n\n", parsedURL.String())
+	header := fmt.Sprintf("# ::: Content from %s\n\n", parsedURL.String())
 
 	return header + markdown + "\n\n", nil
 }

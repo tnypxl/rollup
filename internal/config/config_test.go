@@ -45,10 +45,10 @@ scrape:
 	}
 	defer os.Remove(tmpfile.Name())
 
-	if _, err := tmpfile.Write(content); err != nil {
+	if _, err = tmpfile.Write(content); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	if err := tmpfile.Close(); err != nil {
+	if err = tmpfile.Close(); err != nil {
 		t.Fatalf("Failed to close temp file: %v", err)
 	}
 
