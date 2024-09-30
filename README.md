@@ -63,19 +63,19 @@ rollup [command] [flags]
 
 Rollup can be configured using a YAML file. By default, it looks for `rollup.yml` in the current directory. You can specify a different configuration file using the `--config` flag.
 
-Example `rollup.yml`:
+**Scrape Configuration Parameters:**
+
+- `requests_per_second`: *(float, optional)* The rate at which requests are made per second during web scraping. Default is `1.0`.
+- `burst_limit`: *(integer, optional)* The maximum number of requests that can be made in a burst. Default is `5`.
+
+These parameters help control the request rate to avoid overloading the target servers and to comply with their rate limits.
+
+**Example `rollup.yml` with Scrape Configuration:**
 
 ```yaml
-file_types:
-  - go
-  - md
-ignore:
-  - node_modules/**
-  - vendor/**
-  - .git/**
-code_generated:
-  - **/generated/**
 scrape:
+  requests_per_second: 1.0
+  burst_limit: 5
   sites:
     - base_url: https://example.com
       css_locator: .content
@@ -94,9 +94,6 @@ scrape:
           css_locator: .special-content
           exclude_selectors:
             - .special-ads
-  output_type: single
-  requests_per_second: 1.0
-  burst_limit: 3
 ```
 
 ## Examples
