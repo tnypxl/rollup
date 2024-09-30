@@ -73,16 +73,20 @@ func ScrapeSites(config Config) (map[string]string, error) {
 
 	var wg sync.WaitGroup
 	totalURLs := 0
+	var mu sync.Mutex
 	for _, site := range config.Sites {
 		logger.Printf("Processing site: %s\n", site.BaseURL)
 		wg.Add(1)
 		go func(site SiteConfig) {
 			defer wg.Done()
+			visited := make(map[string]bool)
 			for _, path := range site.AllowedPaths {
 				fullURL := site.BaseURL + path
+				mu.Lock()
 				totalURLs++
+				mu.Unlock()
 				logger.Printf("Queueing URL for scraping: %s\n", fullURL)
-				scrapeSingleURL(fullURL, site, results, limiter)
+				scrapeSingleURL(fullURL, site, results, limiter, visited, 0)
 			}
 		}(site)
 	}
@@ -113,11 +117,15 @@ func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 	url     string
 	content string
 	err     error
-}, limiter *rate.Limiter, visited map[string]bool, currentDepth int,
-) {
+}, limiter *rate.Limiter, visited map[string]bool, currentDepth int) {
 	if site.MaxDepth > 0 && currentDepth > site.MaxDepth {
 		return
 	}
+
+	if visited[url] {
+		return
+	}
+	visited[url] = true
 
 	logger.Printf("Starting to scrape URL: %s\n", url)
 
@@ -164,7 +172,6 @@ func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 				if exists {
 					resolvedURL := resolveURL(href, url)
 					if isAllowedURL(resolvedURL, site) && !visited[resolvedURL] {
-						visited[resolvedURL] = true
 						go scrapeSingleURL(resolvedURL, site, results, limiter, visited, currentDepth+1)
 					}
 				}
