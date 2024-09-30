@@ -51,6 +51,13 @@ func Load(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing config file: %v", err)
 	}
 
+	// Set default values if they are zero or missing
+	if config.Scrape.RequestsPerSecond <= 0 {
+		config.Scrape.RequestsPerSecond = 1.0
+	}
+	if config.Scrape.BurstLimit <= 0 {
+		config.Scrape.BurstLimit = 5
+	}
 	return &config, nil
 }
 

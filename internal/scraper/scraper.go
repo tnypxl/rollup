@@ -68,6 +68,14 @@ func ScrapeSites(config Config) (map[string]string, error) {
 		err     error
 	})
 
+	// Ensure RequestsPerSecond and BurstLimit are valid
+	if config.Scrape.RequestsPerSecond <= 0 {
+		config.Scrape.RequestsPerSecond = 1.0
+	}
+	if config.Scrape.BurstLimit <= 0 {
+		config.Scrape.BurstLimit = 5
+	}
+
 	limiter := rate.NewLimiter(rate.Limit(config.Scrape.RequestsPerSecond), config.Scrape.BurstLimit)
 	logger.Printf("Rate limiter configured with %f requests per second and burst limit of %d\n", config.Scrape.RequestsPerSecond, config.Scrape.BurstLimit)
 

@@ -36,6 +36,16 @@ func init() {
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
 
+func validateScrapeConfig(scrapeConfig config.ScrapeConfig) error {
+	if scrapeConfig.RequestsPerSecond <= 0 {
+		return fmt.Errorf("requests_per_second must be greater than 0")
+	}
+	if scrapeConfig.BurstLimit <= 0 {
+		return fmt.Errorf("burst_limit must be greater than 0")
+	}
+	return nil
+}
+
 func runWeb(cmd *cobra.Command, args []string) error {
     scraper.SetupLogger(verbose)
     logger := log.New(os.Stdout, "WEB: ", log.LstdFlags)
@@ -96,6 +106,13 @@ func runWeb(cmd *cobra.Command, args []string) error {
     }
     logger.Printf("Scraper configuration: OutputType=%s, RequestsPerSecond=%f, BurstLimit=%d",
         outputType, scraperConfig.Scrape.RequestsPerSecond, scraperConfig.Scrape.BurstLimit)
+
+    // Validate scrape configuration
+    err := validateScrapeConfig(cfg.Scrape)
+    if err != nil {
+    	logger.Printf("Invalid scrape configuration: %v", err)
+    	return err
+    }
 
     // Start scraping using scraper.ScrapeSites
     logger.Println("Starting scraping process")
