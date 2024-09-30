@@ -592,3 +592,14 @@ func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []s
 	logger.Printf("Extracted content length: %d\n", len(selectedContent))
 	return selectedContent, nil
 }
+func resolveURL(href, base string) string {
+    parsedBase, err := url.Parse(base)
+    if err != nil {
+        return href
+    }
+    parsedHref, err := url.Parse(href)
+    if err != nil {
+        return href
+    }
+    return parsedBase.ResolveReference(parsedHref).String()
+}
