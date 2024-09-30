@@ -50,6 +50,7 @@ type SiteConfig struct {
 	ExcludePaths     []string
 	OutputAlias      string
 	PathOverrides    []PathOverride
+	LinksContainerSelector string
 }
 
 // PathOverride holds path-specific overrides
@@ -112,8 +113,12 @@ func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 	url     string
 	content string
 	err     error
-}, limiter *rate.Limiter,
+}, limiter *rate.Limiter, visited map[string]bool, currentDepth int,
 ) {
+	if site.MaxDepth > 0 && currentDepth > site.MaxDepth {
+		return
+	}
+
 	logger.Printf("Starting to scrape URL: %s\n", url)
 
 	// Wait for rate limiter before making the request
@@ -128,13 +133,9 @@ func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 		return
 	}
 
-	cssLocator, excludeSelectors := getOverrides(url, site)
-	logger.Printf("Using CSS locator for %s: %s\n", url, cssLocator)
-	logger.Printf("Exclude selectors for %s: %v\n", url, excludeSelectors)
-
-	content, err := scrapeURL(url, cssLocator, excludeSelectors)
+	content, err := FetchWebpageContent(url)
 	if err != nil {
-		logger.Printf("Error scraping %s: %v\n", url, err)
+		logger.Printf("Error fetching content for %s: %v\n", url, err)
 		results <- struct {
 			url     string
 			content string
@@ -143,17 +144,61 @@ func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 		return
 	}
 
-	if content == "" {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
+	if err != nil {
+		logger.Printf("Error parsing HTML for %s: %v\n", url, err)
+		results <- struct {
+			url     string
+			content string
+			err     error
+		}{url, "", fmt.Errorf("error parsing HTML: %v", err)}
+		return
+	}
+
+	if site.LinksContainerSelector != "" {
+		logger.Printf("Processing links container for %s\n", url)
+		linkContainers := doc.Find(site.LinksContainerSelector)
+		linkContainers.Each(func(i int, container *goquery.Selection) {
+			container.Find("a[href]").Each(func(j int, link *goquery.Selection) {
+				href, exists := link.Attr("href")
+				if exists {
+					resolvedURL := resolveURL(href, url)
+					if isAllowedURL(resolvedURL, site) && !visited[resolvedURL] {
+						visited[resolvedURL] = true
+						go scrapeSingleURL(resolvedURL, site, results, limiter, visited, currentDepth+1)
+					}
+				}
+			})
+		})
+		return
+	}
+
+	cssLocator, excludeSelectors := getOverrides(url, site)
+	logger.Printf("Using CSS locator for %s: %s\n", url, cssLocator)
+	logger.Printf("Exclude selectors for %s: %v\n", url, excludeSelectors)
+
+	extractedContent, err := ExtractContentWithCSS(content, cssLocator, excludeSelectors)
+	if err != nil {
+		logger.Printf("Error extracting content for %s: %v\n", url, err)
+		results <- struct {
+			url     string
+			content string
+			err     error
+		}{url, "", err}
+		return
+	}
+
+	if extractedContent == "" {
 		logger.Printf("Warning: Empty content scraped from %s\n", url)
 	} else {
-		logger.Printf("Successfully scraped content from %s (length: %d)\n", url, len(content))
+		logger.Printf("Successfully scraped content from %s (length: %d)\n", url, len(extractedContent))
 	}
 
 	results <- struct {
 		url     string
 		content string
 		err     error
-	}{url, content, nil}
+	}{url, extractedContent, nil}
 }
 
 func scrapeSite(site SiteConfig, results chan<- struct {
@@ -220,18 +265,29 @@ func isAllowedURL(urlStr string, site SiteConfig) bool {
 	}
 
 	path := parsedURL.Path
-	for _, allowedPath := range site.AllowedPaths {
-		if strings.HasPrefix(path, allowedPath) {
-			for _, excludePath := range site.ExcludePaths {
-				if strings.HasPrefix(path, excludePath) {
-					return false
-				}
+	
+	// Check if the URL is within allowed paths
+	if len(site.AllowedPaths) > 0 {
+		allowed := false
+		for _, allowedPath := range site.AllowedPaths {
+			if strings.HasPrefix(path, allowedPath) {
+				allowed = true
+				break
 			}
-			return true
+		}
+		if !allowed {
+			return false
 		}
 	}
 
-	return false
+	// Check if the URL is in excluded paths
+	for _, excludePath := range site.ExcludePaths {
+		if strings.HasPrefix(path, excludePath) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func getOverrides(urlStr string, site SiteConfig) (string, []string) {

@@ -30,6 +30,7 @@ type SiteConfig struct {
     ExcludePaths     []string          `yaml:"exclude_paths"`
     OutputAlias      string            `yaml:"output_alias"`
     PathOverrides    []PathOverride    `yaml:"path_overrides"`
+    LinksContainerSelector string      `yaml:"links_container_selector"`
 }
 
 type PathOverride struct {
