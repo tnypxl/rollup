@@ -20,7 +20,7 @@ func main() {
 	var err error
 
 	if !isHelpCommand {
-		configPath := config.DefaultConfigPath()
+		configPath := "rollup.yml"
 		cfg, err = config.Load(configPath)
 		if err != nil {
 			log.Printf("Warning: Failed to load configuration: %v", err)

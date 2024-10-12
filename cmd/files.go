@@ -108,19 +108,20 @@ func isIgnored(filePath string, patterns []string) bool {
 
 func runRollup(cfg *config.Config) error {
 	// Use config if available, otherwise use command-line flags
-	var types, codeGenList, ignoreList []string
-	if cfg != nil && len(cfg.FileTypes) > 0 {
-		types = cfg.FileTypes
+	var types []string
+	var codeGenList, ignoreList []string
+	if cfg != nil && len(cfg.FileExtensions) > 0 {
+		types = cfg.FileExtensions
 	} else {
 		types = strings.Split(fileTypes, ",")
 	}
-	if cfg != nil && len(cfg.CodeGenerated) > 0 {
-		codeGenList = cfg.CodeGenerated
+	if cfg != nil && len(cfg.CodeGeneratedPaths) > 0 {
+		codeGenList = cfg.CodeGeneratedPaths
 	} else {
 		codeGenList = strings.Split(codeGenPatterns, ",")
 	}
-	if cfg != nil && cfg.Ignore != nil && len(cfg.Ignore) > 0 {
-		ignoreList = cfg.Ignore
+	if cfg != nil && len(cfg.IgnorePaths) > 0 {
+		ignoreList = cfg.IgnorePaths
 	} else {
 		ignoreList = strings.Split(ignorePatterns, ",")
 	}

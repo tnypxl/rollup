@@ -50,10 +50,10 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	scraperConfig.Verbose = verbose
 
 	var siteConfigs []scraper.SiteConfig
-	if len(cfg.Scrape.Sites) > 0 {
-		logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
-		siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
-		for i, site := range cfg.Scrape.Sites {
+	if len(cfg.Sites) > 0 {
+		logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Sites))
+		siteConfigs = make([]scraper.SiteConfig, len(cfg.Sites))
+		for i, site := range cfg.Sites {
 			siteConfigs[i] = scraper.SiteConfig{
 				BaseURL:          site.BaseURL,
 				CSSLocator:       site.CSSLocator,
@@ -92,13 +92,13 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	defaultBurstLimit := 3
 
 	// Use default values if not set in the configuration
-	requestsPerSecond := cfg.Scrape.RequestsPerSecond
-	if requestsPerSecond == 0 {
-		requestsPerSecond = defaultRequestsPerSecond
+	requestsPerSecond := defaultRequestsPerSecond
+	if cfg.RequestsPerSecond != nil {
+		requestsPerSecond = *cfg.RequestsPerSecond
 	}
-	burstLimit := cfg.Scrape.BurstLimit
-	if burstLimit == 0 {
-		burstLimit = defaultBurstLimit
+	burstLimit := defaultBurstLimit
+	if cfg.BurstLimit != nil {
+		burstLimit = *cfg.BurstLimit
 	}
 
 	scraperConfig := scraper.Config{

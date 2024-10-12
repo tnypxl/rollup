@@ -112,9 +112,9 @@ func TestRunRollup(t *testing.T) {
 
 	// Set up test configuration
 	cfg = &config.Config{
-		FileTypes:     []string{"go", "txt", "md"},
-		Ignore:        []string{"*.json", ".git/**", "vendor/**"},
-		CodeGenerated: []string{"generated_*.go"},
+		FileExtensions:     []string{"go", "txt", "md"},
+		IgnorePaths:        []string{"*.json", ".git/**", "vendor/**"},
+		CodeGeneratedPaths: []string{"generated_*.go"},
 	}
 
 	// Change working directory to the temp directory
