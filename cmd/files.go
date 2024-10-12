@@ -146,6 +146,11 @@ func runRollup(cfg *config.Config) error {
 	}
 	defer outputFile.Close()
 
+	startTime := time.Now()
+	showProgress := false
+	progressTicker := time.NewTicker(500 * time.Millisecond)
+	defer progressTicker.Stop()
+
 	// Walk through the directory
 	err = filepath.Walk(absPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -161,16 +166,25 @@ func runRollup(cfg *config.Config) error {
 
 		// Check if the file should be ignored
 		if isIgnored(relPath, ignoreList) {
+			if verbose {
+				fmt.Printf("Ignoring file: %s\n", relPath)
+			}
 			return nil
 		}
 
 		ext := filepath.Ext(path)
 		for _, t := range types {
 			if ext == "."+t {
+				// Verbose logging for processed file
+				if verbose {
+					size := humanReadableSize(info.Size())
+					fmt.Printf("Processing file: %s (%s)\n", relPath, size)
+				}
+
 				// Read file contents
 				content, err := os.ReadFile(path)
 				if err != nil {
-					fmt.Printf("Error reading file %s: %v", path, err)
+					fmt.Printf("Error reading file %s: %v\n", path, err)
 					return nil
 				}
 
@@ -186,12 +200,43 @@ func runRollup(cfg *config.Config) error {
 				break
 			}
 		}
+
+		if !showProgress && time.Since(startTime) > 5*time.Second {
+			showProgress = true
+			fmt.Print("This is taking a while (hold tight) ")
+		}
+
+		select {
+		case <-progressTicker.C:
+			if showProgress {
+				fmt.Print(".")
+			}
+		default:
+		}
+
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("error walking through directory: %v", err)
 	}
 
-	fmt.Printf("Rollup complete. Output file: %s", outputFileName)
+	if showProgress {
+		fmt.Println() // Print a newline after the progress dots
+	}
+
+	fmt.Printf("Rollup complete. Output file: %s\n", outputFileName)
 	return nil
+}
+
+func humanReadableSize(size int64) string {
+	const unit = 1024
+	if size < unit {
+		return fmt.Sprintf("%d B", size)
+	}
+	div, exp := int64(unit), 0
+	for n := size / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(size)/float64(div), "KMGTPE"[exp])
 }

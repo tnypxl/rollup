@@ -114,7 +114,32 @@ func runWeb(cmd *cobra.Command, args []string) error {
 		outputType, requestsPerSecond, burstLimit)
 
 	logger.Println("Starting scraping process")
+	startTime := time.Now()
+	progressTicker := time.NewTicker(time.Second)
+	defer progressTicker.Stop()
+
+	done := make(chan bool)
+	messagePrinted := false
+	go func() {
+		for {
+			select {
+			case <-progressTicker.C:
+				if time.Since(startTime) > 5*time.Second && !messagePrinted {
+					fmt.Print("This is taking a while (hold tight) ")
+					messagePrinted = true
+				} else if messagePrinted {
+					fmt.Print(".")
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	scrapedContent, err := scraper.ScrapeSites(scraperConfig)
+	done <- true
+	fmt.Println() // New line after progress indicator
+
 	if err != nil {
 		logger.Printf("Error occurred during scraping: %v", err)
 		return fmt.Errorf("error scraping content: %v", err)

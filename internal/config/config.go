@@ -87,10 +87,6 @@ func Load(configPath string) (*Config, error) {
 }
 
 func (c *Config) Validate() error {
-	if len(c.FileExtensions) == 0 {
-		return fmt.Errorf("at least one file extension must be specified")
-	}
-
 	if c.RequestsPerSecond != nil && *c.RequestsPerSecond <= 0 {
 		return fmt.Errorf("requests_per_second must be positive")
 	}
