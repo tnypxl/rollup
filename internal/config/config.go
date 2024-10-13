@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Config represents the configuration for the rollup tool
 type Config struct {
 	// FileExtensions is a list of file extensions to include in the rollup
 	FileExtensions []string `yaml:"file_extensions"`
@@ -30,6 +31,7 @@ type Config struct {
 	BurstLimit *int `yaml:"burst_limit,omitempty"`
 }
 
+// SiteConfig contains configuration for scraping a single site
 type SiteConfig struct {
 	// BaseURL is the starting point for scraping this site
 	BaseURL string `yaml:"base_url"`
@@ -56,6 +58,7 @@ type SiteConfig struct {
 	PathOverrides []PathOverride `yaml:"path_overrides"`
 }
 
+// PathOverride allows for path-specific configurations
 type PathOverride struct {
 	// Path is the URL path this override applies to
 	Path string `yaml:"path"`
@@ -86,6 +89,7 @@ func Load(configPath string) (*Config, error) {
 	return &config, nil
 }
 
+// Validate checks the configuration for any invalid values
 func (c *Config) Validate() error {
 	if c.RequestsPerSecond != nil && *c.RequestsPerSecond <= 0 {
 		return fmt.Errorf("requests_per_second must be positive")
