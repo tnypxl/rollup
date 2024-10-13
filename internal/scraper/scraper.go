@@ -155,57 +155,6 @@ func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 	}{url, content, nil}
 }
 
-func scrapeSite(site SiteConfig, results chan<- struct {
-	url     string
-	content string
-	err     error
-}, limiter *rate.Limiter,
-) {
-	visited := make(map[string]bool)
-	queue := []string{site.BaseURL}
-
-	for len(queue) > 0 {
-		url := queue[0]
-		queue = queue[1:]
-
-		if visited[url] {
-			continue
-		}
-		visited[url] = true
-
-		if !isAllowedURL(url, site) {
-			continue
-		}
-
-		// Wait for rate limiter before making the request
-		err := limiter.Wait(context.Background())
-		if err != nil {
-			results <- struct {
-				url     string
-				content string
-				err     error
-			}{url, "", fmt.Errorf("rate limiter error: %v", err)}
-			continue
-		}
-
-		cssLocator, excludeSelectors := getOverrides(url, site)
-		content, err := scrapeURL(url, cssLocator, excludeSelectors)
-		results <- struct {
-			url     string
-			content string
-			err     error
-		}{url, content, err}
-
-		if len(visited) < site.MaxDepth {
-			links, _ := ExtractLinks(url)
-			for _, link := range links {
-				if !visited[link] && isAllowedURL(link, site) {
-					queue = append(queue, link)
-				}
-			}
-		}
-	}
-}
 
 func isAllowedURL(urlStr string, site SiteConfig) bool {
 	parsedURL, err := url.Parse(urlStr)
