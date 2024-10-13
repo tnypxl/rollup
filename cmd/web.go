@@ -18,7 +18,6 @@ import (
 var (
 	urls             []string
 	outputType       string
-	depth            int
 	includeSelector  string
 	excludeSelectors []string
 )
@@ -35,7 +34,6 @@ var webCmd = &cobra.Command{
 func init() {
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
 	webCmd.Flags().StringVarP(&outputType, "output", "o", "single", "Output type: 'single' for one file, 'separate' for multiple files")
-	webCmd.Flags().IntVarP(&depth, "depth", "d", 0, "Depth of link traversal (default: 0, only scrape the given URLs)")
 	webCmd.Flags().StringVar(&includeSelector, "css", "", "CSS selector to extract specific content")
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
@@ -58,14 +56,13 @@ func runWeb(cmd *cobra.Command, args []string) error {
 				BaseURL:          site.BaseURL,
 				CSSLocator:       site.CSSLocator,
 				ExcludeSelectors: site.ExcludeSelectors,
-				MaxDepth:         site.MaxDepth,
 				AllowedPaths:     site.AllowedPaths,
 				ExcludePaths:     site.ExcludePaths,
 				OutputAlias:      site.OutputAlias,
 				PathOverrides:    convertPathOverrides(site.PathOverrides),
 			}
-			logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v",
-				i+1, site.BaseURL, site.CSSLocator, site.MaxDepth, site.AllowedPaths)
+			logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, AllowedPaths=%v",
+				i+1, site.BaseURL, site.CSSLocator, site.AllowedPaths)
 		}
 	} else {
 		logger.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
@@ -75,10 +72,9 @@ func runWeb(cmd *cobra.Command, args []string) error {
 				BaseURL:          u,
 				CSSLocator:       includeSelector,
 				ExcludeSelectors: excludeSelectors,
-				MaxDepth:         depth,
 			}
-			logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d",
-				i+1, u, includeSelector, depth)
+			logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s",
+				i+1, u, includeSelector)
 		}
 	}
 
