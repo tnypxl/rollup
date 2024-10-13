@@ -42,9 +42,6 @@ type SiteConfig struct {
 	// ExcludeSelectors lists CSS selectors for content to exclude
 	ExcludeSelectors []string `yaml:"exclude_selectors"`
 
-	// MaxDepth sets the maximum depth for link traversal
-	MaxDepth int `yaml:"max_depth"`
-
 	// AllowedPaths lists paths that are allowed to be scraped
 	AllowedPaths []string `yaml:"allowed_paths"`
 
@@ -102,9 +99,6 @@ func (c *Config) Validate() error {
 	for _, site := range c.Sites {
 		if site.BaseURL == "" {
 			return fmt.Errorf("base_url must be specified for each site")
-		}
-		if site.MaxDepth < 0 {
-			return fmt.Errorf("max_depth must be non-negative")
 		}
 	}
 

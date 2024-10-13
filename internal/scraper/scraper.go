@@ -45,7 +45,6 @@ type SiteConfig struct {
 	BaseURL          string
 	CSSLocator       string
 	ExcludeSelectors []string
-	MaxDepth         int
 	AllowedPaths     []string
 	ExcludePaths     []string
 	OutputAlias      string
@@ -510,40 +509,6 @@ func scrollPage(page playwright.Page) error {
 	return nil
 }
 
-// ExtractLinks extracts all links from the given URL
-func ExtractLinks(urlStr string) ([]string, error) {
-	logger.Printf("Extracting links from URL: %s\n", urlStr)
-
-	page, err := browser.NewPage()
-	if err != nil {
-		return nil, fmt.Errorf("could not create page: %v", err)
-	}
-	defer page.Close()
-
-	if _, err = page.Goto(urlStr, playwright.PageGotoOptions{
-		WaitUntil: playwright.WaitUntilStateNetworkidle,
-	}); err != nil {
-		return nil, fmt.Errorf("could not go to page: %v", err)
-	}
-
-	links, err := page.Evaluate(`() => {
-		const anchors = document.querySelectorAll('a');
-		return Array.from(anchors).map(a => a.href);
-	}`)
-	if err != nil {
-		return nil, fmt.Errorf("could not extract links: %v", err)
-	}
-
-	var result []string
-	for _, link := range links.([]interface{}) {
-		// Normalize URL by removing trailing slash
-		normalizedLink := strings.TrimRight(link.(string), "/")
-		result = append(result, normalizedLink)
-	}
-
-	logger.Printf("Extracted %d links\n", len(result))
-	return result, nil
-}
 
 // ExtractContentWithCSS extracts content from HTML using a CSS selector
 func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []string) (string, error) {

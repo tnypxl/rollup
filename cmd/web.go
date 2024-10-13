@@ -204,37 +204,10 @@ func generateDefaultFilename() string {
 	return fmt.Sprintf("web-%s.rollup.md", timestamp)
 }
 
-func scrapeRecursively(urlStr string, depth int) (string, error) {
-	visited := make(map[string]bool)
-	return scrapeURL(urlStr, depth, visited)
-}
-
-func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error) {
-	if depth < 0 || visited[urlStr] {
-		return "", nil
-	}
-
-	visited[urlStr] = true
-
+func scrapeURL(urlStr string) (string, error) {
 	content, err := testExtractAndConvertContent(urlStr)
 	if err != nil {
 		return "", err
-	}
-
-	if depth > 0 {
-		links, err := testExtractLinks(urlStr)
-		if err != nil {
-			return content, fmt.Errorf("error extracting links: %v", err)
-		}
-
-		for _, link := range links {
-			subContent, err := scrapeURL(link, depth-1, visited)
-			if err != nil {
-				fmt.Printf("Warning: Error scraping %s: %v\n", link, err)
-				continue
-			}
-			content += "\n\n---\n\n" + subContent
-		}
 	}
 
 	return content, nil
@@ -242,7 +215,6 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 
 var (
 	testExtractAndConvertContent = extractAndConvertContent
-	testExtractLinks             = scraper.ExtractLinks
 )
 
 func extractAndConvertContent(urlStr string) (string, error) {
