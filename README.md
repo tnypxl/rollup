@@ -15,7 +15,7 @@ Rollup aggregates the contents of text-based files and webpages into a markdown 
 - Flexible configuration file support (YAML)
 - Automatic generation of default configuration file
 - Custom output file naming
-- Concurrent processing for improved performance
+- Rate limiting for web scraping to respect server resources
 
 ## Installation
 
@@ -66,37 +66,36 @@ Rollup can be configured using a YAML file. By default, it looks for `rollup.yml
 Example `rollup.yml`:
 
 ```yaml
-file_types:
+file_extensions:
   - go
   - md
-ignore:
+ignore_paths:
   - node_modules/**
   - vendor/**
   - .git/**
-code_generated:
+code_generated_paths:
   - **/generated/**
-scrape:
-  sites:
-    - base_url: https://example.com
-      css_locator: .content
-      exclude_selectors:
-        - .ads
-        - .navigation
-      max_depth: 2
-      allowed_paths:
-        - /blog
-        - /docs
-      exclude_paths:
-        - /admin
-      output_alias: example
-      path_overrides:
-        - path: /special-page
-          css_locator: .special-content
-          exclude_selectors:
-            - .special-ads
-  output_type: single
-  requests_per_second: 1.0
-  burst_limit: 3
+sites:
+  - base_url: https://example.com
+    css_locator: .content
+    exclude_selectors:
+      - .ads
+      - .navigation
+    max_depth: 2
+    allowed_paths:
+      - /blog
+      - /docs
+    exclude_paths:
+      - /admin
+    output_alias: example
+    path_overrides:
+      - path: /special-page
+        css_locator: .special-content
+        exclude_selectors:
+          - .special-ads
+output_type: single
+requests_per_second: 1.0
+burst_limit: 3
 ```
 
 ## Examples
@@ -107,10 +106,10 @@ scrape:
    rollup files
    ```
 
-2. Web scraping with multiple URLs and increased concurrency:
+2. Web scraping with multiple URLs:
 
    ```bash
-   rollup web --urls=https://example.com,https://another-example.com --concurrent=8
+   rollup web --urls=https://example.com,https://another-example.com
    ```
 
 3. Generate a default configuration file:
@@ -119,20 +118,22 @@ scrape:
    rollup generate
    ```
 
-4. Use a custom configuration file and specify output:
+4. Use a custom configuration file:
 
    ```bash
-   rollup files --config=my-config.yml --output=project_summary.md
+   rollup files --config=my-config.yml
    ```
 
-5. Web scraping with separate output files and custom timeout:
+5. Web scraping with separate output files:
+
    ```bash
-   rollup web --urls=https://example.com,https://another-example.com --output=separate --timeout=60
+   rollup web --urls=https://example.com,https://another-example.com --output=separate
    ```
 
 6. Rollup files with specific types and ignore patterns:
+
    ```bash
-   rollup files --types=.go,.md --ignore=vendor/**,*_test.go
+   rollup files --types=go,md --ignore=vendor/**,*_test.go
    ```
 
 7. Web scraping with depth and CSS selector:

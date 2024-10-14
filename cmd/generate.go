@@ -38,23 +38,23 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := config.Config{
-		FileTypes: make([]string, 0, len(fileTypes)),
-		Ignore:    []string{"node_modules/**", "vendor/**", ".git/**"},
+		FileExtensions: make([]string, 0, len(fileTypes)),
+		IgnorePaths:    []string{"node_modules/**", "vendor/**", ".git/**"},
 	}
 
 	for ext := range fileTypes {
-		cfg.FileTypes = append(cfg.FileTypes, ext)
+		cfg.FileExtensions = append(cfg.FileExtensions, ext)
 	}
 
 	// Sort file types for consistency
-	sort.Strings(cfg.FileTypes)
+	sort.Strings(cfg.FileExtensions)
 
 	yamlData, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return fmt.Errorf("error marshaling config: %v", err)
 	}
 
-	outputPath := config.DefaultConfigPath()
+	outputPath := "rollup.yml"
 	err = os.WriteFile(outputPath, yamlData, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing config file: %v", err)

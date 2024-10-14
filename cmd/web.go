@@ -18,7 +18,6 @@ import (
 var (
 	urls             []string
 	outputType       string
-	depth            int
 	includeSelector  string
 	excludeSelectors []string
 )
@@ -35,7 +34,6 @@ var webCmd = &cobra.Command{
 func init() {
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
 	webCmd.Flags().StringVarP(&outputType, "output", "o", "single", "Output type: 'single' for one file, 'separate' for multiple files")
-	webCmd.Flags().IntVarP(&depth, "depth", "d", 0, "Depth of link traversal (default: 0, only scrape the given URLs)")
 	webCmd.Flags().StringVar(&includeSelector, "css", "", "CSS selector to extract specific content")
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
@@ -50,22 +48,21 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	scraperConfig.Verbose = verbose
 
 	var siteConfigs []scraper.SiteConfig
-	if len(cfg.Scrape.Sites) > 0 {
-		logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Scrape.Sites))
-		siteConfigs = make([]scraper.SiteConfig, len(cfg.Scrape.Sites))
-		for i, site := range cfg.Scrape.Sites {
+	if len(cfg.Sites) > 0 {
+		logger.Printf("Using configuration from rollup.yml for %d sites", len(cfg.Sites))
+		siteConfigs = make([]scraper.SiteConfig, len(cfg.Sites))
+		for i, site := range cfg.Sites {
 			siteConfigs[i] = scraper.SiteConfig{
 				BaseURL:          site.BaseURL,
 				CSSLocator:       site.CSSLocator,
 				ExcludeSelectors: site.ExcludeSelectors,
-				MaxDepth:         site.MaxDepth,
 				AllowedPaths:     site.AllowedPaths,
 				ExcludePaths:     site.ExcludePaths,
 				OutputAlias:      site.OutputAlias,
 				PathOverrides:    convertPathOverrides(site.PathOverrides),
 			}
-			logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d, AllowedPaths=%v",
-				i+1, site.BaseURL, site.CSSLocator, site.MaxDepth, site.AllowedPaths)
+			logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, AllowedPaths=%v",
+				i+1, site.BaseURL, site.CSSLocator, site.AllowedPaths)
 		}
 	} else {
 		logger.Printf("No sites defined in rollup.yml, falling back to URL-based configuration")
@@ -75,10 +72,9 @@ func runWeb(cmd *cobra.Command, args []string) error {
 				BaseURL:          u,
 				CSSLocator:       includeSelector,
 				ExcludeSelectors: excludeSelectors,
-				MaxDepth:         depth,
 			}
-			logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s, MaxDepth=%d",
-				i+1, u, includeSelector, depth)
+			logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s",
+				i+1, u, includeSelector)
 		}
 	}
 
@@ -92,13 +88,13 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	defaultBurstLimit := 3
 
 	// Use default values if not set in the configuration
-	requestsPerSecond := cfg.Scrape.RequestsPerSecond
-	if requestsPerSecond == 0 {
-		requestsPerSecond = defaultRequestsPerSecond
+	requestsPerSecond := defaultRequestsPerSecond
+	if cfg.RequestsPerSecond != nil {
+		requestsPerSecond = *cfg.RequestsPerSecond
 	}
-	burstLimit := cfg.Scrape.BurstLimit
-	if burstLimit == 0 {
-		burstLimit = defaultBurstLimit
+	burstLimit := defaultBurstLimit
+	if cfg.BurstLimit != nil {
+		burstLimit = *cfg.BurstLimit
 	}
 
 	scraperConfig := scraper.Config{
@@ -114,7 +110,32 @@ func runWeb(cmd *cobra.Command, args []string) error {
 		outputType, requestsPerSecond, burstLimit)
 
 	logger.Println("Starting scraping process")
+	startTime := time.Now()
+	progressTicker := time.NewTicker(time.Second)
+	defer progressTicker.Stop()
+
+	done := make(chan bool)
+	messagePrinted := false
+	go func() {
+		for {
+			select {
+			case <-progressTicker.C:
+				if time.Since(startTime) > 5*time.Second && !messagePrinted {
+					fmt.Print("This is taking a while (hold tight) ")
+					messagePrinted = true
+				} else if messagePrinted {
+					fmt.Print(".")
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+
 	scrapedContent, err := scraper.ScrapeSites(scraperConfig)
+	done <- true
+	fmt.Println() // New line after progress indicator
+
 	if err != nil {
 		logger.Printf("Error occurred during scraping: %v", err)
 		return fmt.Errorf("error scraping content: %v", err)
@@ -179,37 +200,10 @@ func generateDefaultFilename() string {
 	return fmt.Sprintf("web-%s.rollup.md", timestamp)
 }
 
-func scrapeRecursively(urlStr string, depth int) (string, error) {
-	visited := make(map[string]bool)
-	return scrapeURL(urlStr, depth, visited)
-}
-
-func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error) {
-	if depth < 0 || visited[urlStr] {
-		return "", nil
-	}
-
-	visited[urlStr] = true
-
+func scrapeURL(urlStr string) (string, error) {
 	content, err := testExtractAndConvertContent(urlStr)
 	if err != nil {
 		return "", err
-	}
-
-	if depth > 0 {
-		links, err := testExtractLinks(urlStr)
-		if err != nil {
-			return content, fmt.Errorf("error extracting links: %v", err)
-		}
-
-		for _, link := range links {
-			subContent, err := scrapeURL(link, depth-1, visited)
-			if err != nil {
-				fmt.Printf("Warning: Error scraping %s: %v\n", link, err)
-				continue
-			}
-			content += "\n\n---\n\n" + subContent
-		}
 	}
 
 	return content, nil
@@ -217,7 +211,6 @@ func scrapeURL(urlStr string, depth int, visited map[string]bool) (string, error
 
 var (
 	testExtractAndConvertContent = extractAndConvertContent
-	testExtractLinks             = scraper.ExtractLinks
 )
 
 func extractAndConvertContent(urlStr string) (string, error) {
