@@ -26,6 +26,14 @@ var filesCmd = &cobra.Command{
 	Long: `The files subcommand writes the contents of all files (with target custom file types provided)
 in a given project, current path or a custom path, to a single timestamped markdown file
 whose name is <project-directory-name>-rollup-<timestamp>.md.`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		var err error
+		cfg, err = config.Load("rollup.yml") // Assuming the config file is named rollup.yml
+		if err != nil {
+			return fmt.Errorf("failed to load configuration: %v", err)
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runRollup(cfg)
 	},
