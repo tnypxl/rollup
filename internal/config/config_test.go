@@ -27,7 +27,7 @@ sites:
       - "/blog"
     exclude_paths:
       - "/admin"
-    output_alias: "example"
+      file_name_prefix: "example"
     path_overrides:
       - path: "/special"
         css_locator: ".special-content"
@@ -71,7 +71,7 @@ burst_limit: 5
 				ExcludeSelectors: []string{".ads"},
 				AllowedPaths:     []string{"/blog"},
 				ExcludePaths:     []string{"/admin"},
-				OutputAlias:      "example",
+				FileNamePrefix:   "example",
 				PathOverrides: []PathOverride{
 					{
 						Path:             "/special",

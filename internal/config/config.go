@@ -48,8 +48,8 @@ type SiteConfig struct {
 	// ExcludePaths lists paths that should not be scraped
 	ExcludePaths []string `yaml:"exclude_paths"`
 
-	// OutputAlias provides an alternative name for output files
-	OutputAlias string `yaml:"output_alias"`
+	// FileNamePrefix provides the base name for output files
+	FileNamePrefix string `yaml:"file_name_prefix"`
 
 	// PathOverrides allows for path-specific configurations
 	PathOverrides []PathOverride `yaml:"path_overrides"`

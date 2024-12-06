@@ -33,7 +33,7 @@ var webCmd = &cobra.Command{
 
 func init() {
 	webCmd.Flags().StringSliceVarP(&urls, "urls", "u", []string{}, "URLs of the webpages to scrape (comma-separated)")
-	webCmd.Flags().StringVarP(&outputType, "output", "o", "single", "Output type: 'single' for one file, 'separate' for multiple files")
+	webCmd.Flags().StringVarP(&outputType, "output", "o", "", "Output type: 'single' for one file, 'separate' for multiple files")
 	webCmd.Flags().StringVar(&includeSelector, "css", "", "CSS selector to extract specific content")
 	webCmd.Flags().StringSliceVar(&excludeSelectors, "exclude", []string{}, "CSS selectors to exclude from the extracted content (comma-separated)")
 }
@@ -58,7 +58,6 @@ func runWeb(cmd *cobra.Command, args []string) error {
 				ExcludeSelectors: site.ExcludeSelectors,
 				AllowedPaths:     site.AllowedPaths,
 				ExcludePaths:     site.ExcludePaths,
-				OutputAlias:      site.OutputAlias,
 				PathOverrides:    convertPathOverrides(site.PathOverrides),
 			}
 			logger.Printf("Site %d configuration: BaseURL=%s, CSSLocator=%s, AllowedPaths=%v",
@@ -132,7 +131,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	scrapedContent, err := scraper.ScrapeSites(scraperConfig)
+	err := scraper.ScrapeSites(scraperConfig)
 	done <- true
 	fmt.Println() // New line after progress indicator
 
@@ -140,15 +139,9 @@ func runWeb(cmd *cobra.Command, args []string) error {
 		logger.Printf("Error occurred during scraping: %v", err)
 		return fmt.Errorf("error scraping content: %v", err)
 	}
-	logger.Printf("Scraping completed. Total content scraped: %d", len(scrapedContent))
+	logger.Println("Scraping completed")
 
-	if outputType == "single" {
-		logger.Println("Writing content to a single file")
-		return writeSingleFile(scrapedContent)
-	} else {
-		logger.Println("Writing content to multiple files")
-		return writeMultipleFiles(scrapedContent)
-	}
+	return nil
 }
 
 func writeSingleFile(content map[string]string) error {

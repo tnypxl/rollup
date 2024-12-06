@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -47,7 +48,7 @@ type SiteConfig struct {
 	ExcludeSelectors []string
 	AllowedPaths     []string
 	ExcludePaths     []string
-	OutputAlias      string
+	FileNamePrefix   string
 	PathOverrides    []PathOverride
 }
 
@@ -58,16 +59,18 @@ type PathOverride struct {
 	ExcludeSelectors []string
 }
 
-func ScrapeSites(config Config) (map[string]string, error) {
+func ScrapeSites(config Config) error {
 	logger.Println("Starting ScrapeSites function - Verbose mode is active")
 	results := make(chan struct {
 		url     string
 		content string
+		site    SiteConfig // Add site config to track which site the content came from
 		err     error
 	})
 
 	limiter := rate.NewLimiter(rate.Limit(config.Scrape.RequestsPerSecond), config.Scrape.BurstLimit)
-	logger.Printf("Rate limiter configured with %f requests per second and burst limit of %d\n", config.Scrape.RequestsPerSecond, config.Scrape.BurstLimit)
+	logger.Printf("Rate limiter configured with %f requests per second and burst limit of %d\n",
+		config.Scrape.RequestsPerSecond, config.Scrape.BurstLimit)
 
 	var wg sync.WaitGroup
 	totalURLs := 0
@@ -91,70 +94,72 @@ func ScrapeSites(config Config) (map[string]string, error) {
 		logger.Println("All goroutines completed, results channel closed")
 	}()
 
-	scrapedContent := make(map[string]string)
+	// Use a map that includes site configuration
+	scrapedContent := make(map[string]struct {
+		content string
+		site    SiteConfig
+	})
+
 	for result := range results {
 		if result.err != nil {
 			logger.Printf("Error scraping %s: %v\n", result.url, result.err)
 			continue
 		}
-		logger.Printf("Successfully scraped content from %s (length: %d)\n", result.url, len(result.content))
-		scrapedContent[result.url] = result.content
+		logger.Printf("Successfully scraped content from %s (length: %d)\n",
+			result.url, len(result.content))
+		scrapedContent[result.url] = struct {
+			content string
+			site    SiteConfig
+		}{
+			content: result.content,
+			site:    result.site,
+		}
 	}
 
 	logger.Printf("Total URLs processed: %d\n", totalURLs)
 	logger.Printf("Successfully scraped content from %d URLs\n", len(scrapedContent))
 
-	return scrapedContent, nil
+	return SaveToFiles(scrapedContent, config)
 }
 
 func scrapeSingleURL(url string, site SiteConfig, results chan<- struct {
 	url     string
 	content string
+	site    SiteConfig
 	err     error
-}, limiter *rate.Limiter,
-) {
+}, limiter *rate.Limiter) {
 	logger.Printf("Starting to scrape URL: %s\n", url)
 
-	// Wait for rate limiter before making the request
 	err := limiter.Wait(context.Background())
 	if err != nil {
-		logger.Printf("Rate limiter error for %s: %v\n", url, err)
 		results <- struct {
 			url     string
 			content string
+			site    SiteConfig
 			err     error
-		}{url, "", fmt.Errorf("rate limiter error: %v", err)}
+		}{url, "", site, fmt.Errorf("rate limiter error: %v", err)}
 		return
 	}
 
 	cssLocator, excludeSelectors := getOverrides(url, site)
-	logger.Printf("Using CSS locator for %s: %s\n", url, cssLocator)
-	logger.Printf("Exclude selectors for %s: %v\n", url, excludeSelectors)
-
 	content, err := scrapeURL(url, cssLocator, excludeSelectors)
 	if err != nil {
-		logger.Printf("Error scraping %s: %v\n", url, err)
 		results <- struct {
 			url     string
 			content string
+			site    SiteConfig
 			err     error
-		}{url, "", err}
+		}{url, "", site, err}
 		return
-	}
-
-	if content == "" {
-		logger.Printf("Warning: Empty content scraped from %s\n", url)
-	} else {
-		logger.Printf("Successfully scraped content from %s (length: %d)\n", url, len(content))
 	}
 
 	results <- struct {
 		url     string
 		content string
+		site    SiteConfig
 		err     error
-	}{url, content, nil}
+	}{url, content, site, nil}
 }
-
 
 func isAllowedURL(urlStr string, site SiteConfig) bool {
 	parsedURL, err := url.Parse(urlStr)
@@ -228,9 +233,14 @@ func getFilenameFromContent(content, url string) string {
 }
 
 func sanitizeFilename(name string) string {
-	// Remove any character that isn't alphanumeric, dash, or underscore
-	reg, _ := regexp.Compile("[^a-zA-Z0-9-_]+")
-	return reg.ReplaceAllString(name, "_")
+	// Replace all non-alphanumeric characters with dashes
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+	name = reg.ReplaceAllString(name, "-")
+	// Remove any leading or trailing dashes
+	name = strings.Trim(name, "-")
+	// Collapse multiple consecutive dashes into one
+	reg = regexp.MustCompile("-+")
+	return reg.ReplaceAllString(name, "-")
 }
 
 // URLConfig holds configuration for a single URL
@@ -238,7 +248,7 @@ type URLConfig struct {
 	URL              string
 	CSSLocator       string
 	ExcludeSelectors []string
-	OutputAlias      string
+	FileNamePrefix   string
 }
 
 // SetupLogger initializes the logger based on the verbose flag
@@ -266,7 +276,7 @@ func InitPlaywright() error {
 		return fmt.Errorf("could not start Playwright: %v", err)
 	}
 
-	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+	userAgent := "Mozilla/5.0 (Linux; Android 15; Pixel 9 Build/AP3A.241105.008) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.6723.106 Mobile Safari/537.36 OPX/2.5"
 
 	browser, err = pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
 		Args: []string{fmt.Sprintf("--user-agent=%s", userAgent)},
@@ -297,6 +307,119 @@ func InitBrowser() error {
 // CloseBrowser closes the browser
 func CloseBrowser() {
 	ClosePlaywright()
+}
+
+// SaveToFiles writes the scraped content to files based on output type
+func SaveToFiles(content map[string]struct {
+	content string
+	site    SiteConfig
+}, config Config) error {
+	if config.OutputType == "" {
+		config.OutputType = "separate" // default to separate files if not specified
+	}
+
+	switch config.OutputType {
+	case "single":
+		if err := os.MkdirAll("output", 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %v", err)
+		}
+		var combined strings.Builder
+		for url, data := range content {
+			combined.WriteString(fmt.Sprintf("## %s\n\n", url))
+			combined.WriteString(data.content)
+			combined.WriteString("\n\n")
+		}
+		return os.WriteFile(filepath.Join("output", "combined.md"), []byte(combined.String()), 0644)
+
+	case "separate":
+		if err := os.MkdirAll("output", 0755); err != nil {
+			return fmt.Errorf("failed to create output directory: %v", err)
+		}
+
+		// Group content by site and path
+		contentBySitePath := make(map[string]map[string]string)
+		for urlStr, data := range content {
+			parsedURL, err := url.Parse(urlStr)
+			if err != nil {
+				logger.Printf("Warning: Could not parse URL %s: %v", urlStr, err)
+				continue
+			}
+
+			// Find matching allowed path for this URL
+			var matchingPath string
+			for _, path := range data.site.AllowedPaths {
+				if strings.HasPrefix(parsedURL.Path, path) {
+					matchingPath = path
+					break
+				}
+			}
+			if matchingPath == "" {
+				logger.Printf("Warning: No matching allowed path for URL %s", urlStr)
+				continue
+			}
+
+			siteKey := fmt.Sprintf("%s-%s", data.site.BaseURL, data.site.FileNamePrefix)
+			if contentBySitePath[siteKey] == nil {
+				contentBySitePath[siteKey] = make(map[string]string)
+			}
+
+			// Combine all content for the same path
+			if existing, exists := contentBySitePath[siteKey][matchingPath]; exists {
+				contentBySitePath[siteKey][matchingPath] = existing + "\n\n" + data.content
+			} else {
+				contentBySitePath[siteKey][matchingPath] = data.content
+			}
+		}
+
+		// Write files for each site and path
+		for siteKey, pathContent := range contentBySitePath {
+			for path, content := range pathContent {
+				parts := strings.SplitN(siteKey, "-", 2) // Split only on first hyphen
+				prefix := parts[1]                       // Get the FileNamePrefix part
+				if prefix == "" {
+					prefix = "doc" // default prefix if none specified
+				}
+
+				normalizedPath := NormalizePathForFilename(path)
+				if normalizedPath == "" {
+					normalizedPath = "index"
+				}
+
+				filename := filepath.Join("output", fmt.Sprintf("%s-%s.md",
+					prefix, normalizedPath))
+
+				// Ensure we don't have empty files
+				if strings.TrimSpace(content) == "" {
+					logger.Printf("Skipping empty content for path %s", path)
+					continue
+				}
+
+				if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+					return fmt.Errorf("failed to write file %s: %v", filename, err)
+				}
+				logger.Printf("Wrote content to %s", filename)
+			}
+		}
+		return nil
+
+	default:
+		return fmt.Errorf("unsupported output type: %s", config.OutputType)
+	}
+}
+
+// NormalizePathForFilename converts a URL path into a valid filename component
+func NormalizePathForFilename(urlPath string) string {
+	// Remove leading/trailing slashes
+	path := strings.Trim(urlPath, "/")
+	// Replace all non-alphanumeric characters with dashes
+	reg := regexp.MustCompile("[^a-zA-Z0-9]+")
+	path = reg.ReplaceAllString(path, "-")
+	// Remove any leading or trailing dashes
+	path = strings.Trim(path, "-")
+	// Collapse multiple consecutive dashes into one
+	reg = regexp.MustCompile("-+")
+	path = reg.ReplaceAllString(path, "-")
+	return path
 }
 
 // FetchWebpageContent retrieves the content of a webpage using Playwright
@@ -337,7 +460,7 @@ func FetchWebpageContent(urlStr string) (string, error) {
 	}
 
 	logger.Println("Waiting for body element")
-	
+
 	bodyElement := page.Locator("body")
 	err = bodyElement.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
@@ -443,8 +566,7 @@ func scrollPage(page playwright.Page) error {
 		previousHeight = currentHeight
 
 		// Wait for a while before scrolling again
-		
-		
+
 	}
 
 	logger.Println("Scrolling back to top")
@@ -457,7 +579,6 @@ func scrollPage(page playwright.Page) error {
 	logger.Println("Page scroll completed")
 	return nil
 }
-
 
 // ExtractContentWithCSS extracts content from HTML using a CSS selector
 func ExtractContentWithCSS(content, includeSelector string, excludeSelectors []string) (string, error) {
