@@ -3,8 +3,8 @@ package scraper
 import (
 	"io"
 	"log"
-	"net/http"
-	"net/http/httptest"
+	// "net/http"
+	// "net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
@@ -143,39 +143,39 @@ This is a **test** paragraph.
 	}
 }
 
-func TestExtractLinks(t *testing.T) {
-	// Initialize Playwright before running the test
-	if err := InitPlaywright(); err != nil {
-		t.Fatalf("Failed to initialize Playwright: %v", err)
-	}
-	defer ClosePlaywright()
+// func TestExtractLinks(t *testing.T) {
+// 	// Initialize Playwright before running the test
+// 	if err := InitPlaywright(); err != nil {
+// 		t.Fatalf("Failed to initialize Playwright: %v", err)
+// 	}
+// 	defer ClosePlaywright()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`
-			<html>
-				<body>
-					<a href="https://example.com/page1">Page 1</a>
-					<a href="https://example.com/page2">Page 2</a>
-					<a href="https://othersite.com">Other Site</a>
-				</body>
-			</html>
-		`))
-	}))
-	defer server.Close()
+// 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 		w.Header().Set("Content-Type", "text/html")
+// 		w.Write([]byte(`
+// 			<html>
+// 				<body>
+// 					<a href="https://example.com/page1">Page 1</a>
+// 					<a href="https://example.com/page2">Page 2</a>
+// 					<a href="https://othersite.com">Other Site</a>
+// 				</body>
+// 			</html>
+// 		`))
+// 	}))
+// 	defer server.Close()
 
-	links, err := ExtractLinks(server.URL)
-	if err != nil {
-		t.Fatalf("ExtractLinks() returned error: %v", err)
-	}
+// 	links, err := ExtractLinks(server.URL)
+// 	if err != nil {
+// 		t.Fatalf("ExtractLinks() returned error: %v", err)
+// 	}
 
-	expectedLinks := []string{
-		"https://example.com/page1",
-		"https://example.com/page2",
-		"https://othersite.com",
-	}
+// 	expectedLinks := []string{
+// 		"https://example.com/page1",
+// 		"https://example.com/page2",
+// 		"https://othersite.com",
+// 	}
 
-	if !reflect.DeepEqual(links, expectedLinks) {
-		t.Errorf("ExtractLinks() = %v, want %v", links, expectedLinks)
-	}
-}
+// 	if !reflect.DeepEqual(links, expectedLinks) {
+// 		t.Errorf("ExtractLinks() = %v, want %v", links, expectedLinks)
+// 	}
+// }

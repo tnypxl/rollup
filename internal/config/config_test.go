@@ -69,7 +69,6 @@ burst_limit: 5
 				BaseURL:          "https://example.com",
 				CSSLocator:       "main",
 				ExcludeSelectors: []string{".ads"},
-				MaxDepth:         2,
 				AllowedPaths:     []string{"/blog"},
 				ExcludePaths:     []string{"/admin"},
 				OutputAlias:      "example",
@@ -103,7 +102,7 @@ func TestValidate(t *testing.T) {
 			config: Config{
 				FileExtensions: []string{".go"},
 				Sites: []SiteConfig{
-					{BaseURL: "https://example.com", MaxDepth: 2},
+					{BaseURL: "https://example.com"},
 				},
 			},
 			wantErr: false,
@@ -141,7 +140,7 @@ func TestValidate(t *testing.T) {
 			name: "Negative max depth",
 			config: Config{
 				FileExtensions: []string{".go"},
-				Sites:          []SiteConfig{{BaseURL: "https://example.com", MaxDepth: -1}},
+				Sites:          []SiteConfig{{BaseURL: "https://example.com"}},
 			},
 			wantErr: true,
 		},
