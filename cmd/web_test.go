@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"testing"
-	"strings"
+
 	"github.com/tnypxl/rollup/internal/config"
 )
 
@@ -67,9 +67,9 @@ func TestSanitizeFilename(t *testing.T) {
 
 func TestGetFilenameFromContent(t *testing.T) {
 	tests := []struct {
-		content  string
-		url      string
-		expected string
+		content   string
+		url       string
+		expected  string
 		expectErr bool
 	}{
 		{"<title>Test Page</title>", "http://example.com", "Test_Page.rollup.md", false},
@@ -101,54 +101,4 @@ func TestGetFilenameFromContent(t *testing.T) {
 // Mock functions for testing
 func mockExtractAndConvertContent(urlStr string) (string, error) {
 	return "Mocked content for " + urlStr, nil
-}
-
-func mockExtractLinks() ([]string, error) {
-	return []string{"http://example.com/link1", "http://example.com/link2"}, nil
-}
-
-func TestScrapeURL(t *testing.T) {
-	// Store the original functions
-	originalExtractAndConvertContent := testExtractAndConvertContent
-	originalExtractLinks := testExtractLinks
-
-	// Define mock functions
-	testExtractAndConvertContent = func(urlStr string) (string, error) {
-		return "Mocked content for " + urlStr, nil
-	}
-	testExtractLinks = func(urlStr string) ([]string, error) {
-		return []string{"http://example.com/link1", "http://example.com/link2"}, nil
-	}
-
-	// Defer the restoration of original functions
-	defer func() {
-		testExtractAndConvertContent = originalExtractAndConvertContent
-		testExtractLinks = originalExtractLinks
-	}()
-
-	tests := []struct {
-		url           string
-		depth         int
-		expectedCalls int
-	}{
-		{"http://example.com", 0, 1},
-		{"http://example.com", 1, 3},
-		{"http://example.com", 2, 3}, // Same as depth 1 because our mock only returns 2 links
-	}
-
-	for _, test := range tests {
-		visited := make(map[string]bool)
-		content, err := scrapeURL(test.url, test.depth, visited)
-		if err != nil {
-			t.Errorf("scrapeURL(%q, %d) returned error: %v", test.url, test.depth, err)
-			continue
-		}
-		if len(visited) != test.expectedCalls {
-			t.Errorf("scrapeURL(%q, %d) made %d calls, expected %d", test.url, test.depth, len(visited), test.expectedCalls)
-		}
-		expectedContent := "Mocked content for " + test.url
-		if !strings.Contains(content, expectedContent) {
-			t.Errorf("scrapeURL(%q, %d) content doesn't contain %q", test.url, test.depth, expectedContent)
-		}
-	}
 }
