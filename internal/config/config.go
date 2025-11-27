@@ -88,6 +88,10 @@ func Load(configPath string) (*Config, error) {
 
 // Validate checks the configuration for any invalid values
 func (c *Config) Validate() error {
+	if len(c.FileExtensions) == 0 && len(c.Sites) == 0 {
+		return fmt.Errorf("file_extensions or sites must be specified")
+	}
+
 	if c.RequestsPerSecond != nil && *c.RequestsPerSecond <= 0 {
 		return fmt.Errorf("requests_per_second must be positive")
 	}

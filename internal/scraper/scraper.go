@@ -75,13 +75,15 @@ func ScrapeSites(config Config) error {
 	var wg sync.WaitGroup
 	totalURLs := 0
 	for _, site := range config.Sites {
+		totalURLs += len(site.AllowedPaths)
+	}
+	for _, site := range config.Sites {
 		logger.Printf("Processing site: %s\n", site.BaseURL)
 		wg.Add(1)
 		go func(site SiteConfig) {
 			defer wg.Done()
 			for _, path := range site.AllowedPaths {
 				fullURL := site.BaseURL + path
-				totalURLs++
 				logger.Printf("Queueing URL for scraping: %s\n", fullURL)
 				scrapeSingleURL(fullURL, site, results, limiter)
 			}
@@ -532,8 +534,6 @@ func scrollPage(page playwright.Page) error {
 		() => {
 			window.scrollTo(0, document.body.scrollHeight);
 			return document.body.scrollHeight;
-			// wait for 500 ms
-			new Promise(resolve => setTimeout(resolve, 500));
 		}
 	`
 
@@ -565,8 +565,8 @@ func scrollPage(page playwright.Page) error {
 
 		previousHeight = currentHeight
 
-		// Wait for a while before scrolling again
-
+		// Wait for content to load before scrolling again
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	logger.Println("Scrolling back to top")

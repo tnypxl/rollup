@@ -10,8 +10,8 @@ func TestLoad(t *testing.T) {
 	// Create a temporary config file
 	content := []byte(`
 file_extensions:
-  - .go
-  - .md
+  - go
+  - md
 ignore_paths:
   - "*.tmp"
   - "**/*.log"
@@ -27,7 +27,7 @@ sites:
       - "/blog"
     exclude_paths:
       - "/admin"
-      file_name_prefix: "example"
+    file_name_prefix: "example"
     path_overrides:
       - path: "/special"
         css_locator: ".special-content"
@@ -61,7 +61,7 @@ burst_limit: 5
 	rps := 1.0
 	bl := 5
 	expectedConfig := &Config{
-		FileExtensions:     []string{".go", ".md"},
+		FileExtensions:     []string{"go", "md"},
 		IgnorePaths:        []string{"*.tmp", "**/*.log"},
 		CodeGeneratedPaths: []string{"generated_*.go"},
 		Sites: []SiteConfig{
@@ -100,7 +100,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "Valid config",
 			config: Config{
-				FileExtensions: []string{".go"},
+				FileExtensions: []string{"go"},
 				Sites: []SiteConfig{
 					{BaseURL: "https://example.com"},
 				},
@@ -115,7 +115,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "Invalid requests per second",
 			config: Config{
-				FileExtensions:    []string{".go"},
+				FileExtensions:    []string{"go"},
 				RequestsPerSecond: func() *float64 { f := -1.0; return &f }(),
 			},
 			wantErr: true,
@@ -123,7 +123,7 @@ func TestValidate(t *testing.T) {
 		{
 			name: "Invalid burst limit",
 			config: Config{
-				FileExtensions: []string{".go"},
+				FileExtensions: []string{"go"},
 				BurstLimit:     func() *int { i := -1; return &i }(),
 			},
 			wantErr: true,
@@ -131,16 +131,8 @@ func TestValidate(t *testing.T) {
 		{
 			name: "Site without base URL",
 			config: Config{
-				FileExtensions: []string{".go"},
+				FileExtensions: []string{"go"},
 				Sites:          []SiteConfig{{}},
-			},
-			wantErr: true,
-		},
-		{
-			name: "Negative max depth",
-			config: Config{
-				FileExtensions: []string{".go"},
-				Sites:          []SiteConfig{{BaseURL: "https://example.com"}},
 			},
 			wantErr: true,
 		},

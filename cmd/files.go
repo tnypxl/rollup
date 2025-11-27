@@ -33,7 +33,7 @@ whose name is <project-directory-name>-rollup-<timestamp>.md.`,
 
 func init() {
 	filesCmd.Flags().StringVarP(&path, "path", "p", ".", "Path to the project directory")
-	filesCmd.Flags().StringVarP(&fileTypes, "types", "t", ".go,.md,.txt", "Comma-separated list of file extensions to include")
+	filesCmd.Flags().StringVarP(&fileTypes, "types", "t", "go,md,txt", "Comma-separated list of file extensions to include (without leading dot)")
 	filesCmd.Flags().StringVarP(&codeGenPatterns, "codegen", "g", "", "Comma-separated list of glob patterns for code-generated files")
 	filesCmd.Flags().StringVarP(&ignorePatterns, "ignore", "i", "", "Comma-separated list of glob patterns for files to ignore")
 }
