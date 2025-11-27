@@ -29,6 +29,8 @@ var webCmd = &cobra.Command{
 	Short: "Scrape main content from webpages and convert to Markdown",
 	Long:  `Scrape the main content from one or more webpages, ignoring navigational elements, ads, and other UI aspects. Convert the content to a well-structured Markdown file.`,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Setup logger before initializing Playwright
+		scraper.SetupLogger(verbose)
 		// Initialize Playwright for web scraping
 		if err := scraper.InitPlaywright(); err != nil {
 			return fmt.Errorf("failed to initialize Playwright: %w", err)
@@ -83,6 +85,7 @@ func runWeb(cmd *cobra.Command, args []string) error {
 				BaseURL:          u,
 				CSSLocator:       includeSelector,
 				ExcludeSelectors: excludeSelectors,
+				AllowedPaths:     []string{""},
 			}
 			logger.Printf("URL %d configuration: BaseURL=%s, CSSLocator=%s",
 				i+1, u, includeSelector)
