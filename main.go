@@ -10,8 +10,6 @@ import (
 	"github.com/tnypxl/rollup/internal/scraper"
 )
 
-var cfg *config.Config
-
 func main() {
 	// Check if the command is "help"
 	isHelpCommand := len(os.Args) > 1 && (os.Args[1] == "help" || os.Args[1] == "--help" || os.Args[1] == "-h")
