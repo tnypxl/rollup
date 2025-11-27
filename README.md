@@ -1,33 +1,39 @@
 # Rollup
 
-Rollup aggregates the contents of text-based files and webpages into a markdown file.
+Rollup aggregates the contents of text-based files and webpages into markdown files.
 
 ## Features
 
-- File type filtering for targeted content aggregation
-- Ignore patterns for excluding specific files or directories
-- Support for code-generated file detection and exclusion
-- Advanced web scraping functionality with depth control
-- Verbose logging option for detailed operation insights
-- Exclusionary CSS selectors for precise web content extraction
-- Support for multiple URLs in web scraping operations
-- Configurable output format for web scraping (single file or separate files)
-- Flexible configuration file support (YAML)
-- Automatic generation of default configuration file
-- Custom output file naming
-- Rate limiting for web scraping to respect server resources
+- **File aggregation**: Combine multiple source files into a single markdown document
+- **File type filtering**: Include only specific file extensions
+- **Ignore patterns**: Exclude files/directories using glob patterns
+- **Code-generated file detection**: Mark auto-generated files as read-only in output
+- **Web scraping**: Scrape webpage content using Playwright browser automation
+- **HTML to Markdown conversion**: Automatically converts scraped HTML to clean markdown
+- **CSS selectors**: Extract specific content sections or exclude unwanted elements
+- **Path-based overrides**: Configure different selectors for specific URL paths
+- **Rate limiting**: Configurable requests per second and burst limits for web scraping
+- **Output modes**: Single combined file or separate files per source
+- **Verbose logging**: Detailed operation insights for debugging
+- **YAML configuration**: Flexible configuration file support
 
 ## Installation
 
-To install Rollup, make sure you have Go installed on your system, then run:
+Ensure you have Go 1.21+ installed, then run:
 
 ```bash
-go get github.com/tnypxl/rollup
+go install github.com/tnypxl/rollup@latest
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/tnypxl/rollup.git
+cd rollup
+go build -o rollup .
 ```
 
 ## Usage
-
-Basic usage:
 
 ```bash
 rollup [command] [flags]
@@ -35,111 +41,185 @@ rollup [command] [flags]
 
 ### Commands
 
-- `rollup files`: Rollup files into a single Markdown file
-- `rollup web`: Scrape main content from webpages and convert to Markdown
-- `rollup generate`: Generate a rollup.yml config file
+| Command | Description |
+|---------|-------------|
+| `files` | Aggregate local files into a single markdown file |
+| `web` | Scrape webpages and convert to markdown |
+| `generate` | Generate a default rollup.yml config file |
 
 ### Flags for `files` command
 
-- `--path, -p`: Path to the project directory (default: current directory)
-- `--types, -t`: Comma-separated list of file extensions to include (default: .go,.md,.txt)
-- `--codegen, -g`: Comma-separated list of glob patterns for code-generated files
-- `--ignore, -i`: Comma-separated list of glob patterns for files to ignore
+| Flag | Short | Default | Description |
+|------|-------|---------|-------------|
+| `--path` | `-p` | `.` | Path to the project directory |
+| `--types` | `-t` | `go,md,txt` | Comma-separated list of file extensions (without dots) |
+| `--codegen` | `-g` | | Glob patterns for code-generated files |
+| `--ignore` | `-i` | | Glob patterns for files to ignore |
 
 ### Flags for `web` command
 
-- `--urls, -u`: URLs of the webpages to scrape (comma-separated)
-- `--output, -o`: Output type: 'single' for one file, 'separate' for multiple files (default: single)
-- `--depth, -d`: Depth of link traversal (default: 0, only scrape the given URLs)
-- `--css`: CSS selector to extract specific content
-- `--exclude`: CSS selectors to exclude from the extracted content (comma-separated)
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--urls` | `-u` | URLs of webpages to scrape (comma-separated) |
+| `--output` | `-o` | Output type: `single` or `separate` |
+| `--css` | | CSS selector to extract specific content |
+| `--exclude` | | CSS selectors to exclude (comma-separated) |
 
 ### Global flags
 
-- `--config, -f`: Path to the configuration file (default: rollup.yml in the current directory)
-- `--verbose, -v`: Enable verbose logging
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--config` | `-f` | Path to config file (default: `rollup.yml`) |
+| `--verbose` | `-v` | Enable verbose logging |
 
 ## Configuration
 
-Rollup can be configured using a YAML file. By default, it looks for `rollup.yml` in the current directory. You can specify a different configuration file using the `--config` flag.
+Rollup reads from `rollup.yml` by default. Use `--config` to specify a different file.
 
-Example `rollup.yml`:
+### Configuration Options
 
 ```yaml
+# File extensions to include (without leading dots)
 file_extensions:
   - go
   - md
+  - js
+
+# Glob patterns for paths to ignore
 ignore_paths:
   - node_modules/**
   - vendor/**
   - .git/**
+
+# Glob patterns for code-generated files (marked as read-only in output)
 code_generated_paths:
-  - **/generated/**
+  - "**/*.pb.go"
+  - "**/generated/**"
+
+# Web scraping site configurations
 sites:
   - base_url: https://example.com
-    css_locator: .content
+    css_locator: .main-content
     exclude_selectors:
       - .ads
       - .navigation
-    max_depth: 2
+      - footer
     allowed_paths:
-      - /blog
       - /docs
+      - /blog
     exclude_paths:
       - /admin
-    output_alias: example
+    file_name_prefix: example-docs
     path_overrides:
       - path: /special-page
         css_locator: .special-content
         exclude_selectors:
           - .special-ads
+
+# Output type for web scraping: 'single' or 'separate'
 output_type: single
+
+# Rate limiting for web requests
 requests_per_second: 1.0
 burst_limit: 3
 ```
 
+### Configuration Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file_extensions` | list | File extensions to include in file rollup |
+| `ignore_paths` | list | Glob patterns for files/directories to skip |
+| `code_generated_paths` | list | Glob patterns for auto-generated files |
+| `sites` | list | Web scraping target configurations |
+| `output_type` | string | `single` (one file) or `separate` (multiple files) |
+| `requests_per_second` | float | Rate limit for web requests (default: 1.0) |
+| `burst_limit` | int | Maximum burst size for rate limiting (default: 3) |
+
+#### Site Configuration
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `base_url` | string | Starting URL for scraping (required) |
+| `css_locator` | string | CSS selector for content extraction |
+| `exclude_selectors` | list | CSS selectors for content to exclude |
+| `allowed_paths` | list | URL paths allowed for scraping |
+| `exclude_paths` | list | URL paths to skip |
+| `file_name_prefix` | string | Prefix for output file names |
+| `path_overrides` | list | Path-specific selector overrides |
+
 ## Examples
 
-1. Rollup files with default configuration:
+### File Aggregation
 
-   ```bash
-   rollup files
-   ```
+```bash
+# Rollup files using config file
+rollup files
 
-2. Web scraping with multiple URLs:
+# Specify file types and ignore patterns
+rollup files --types=go,js,ts --ignore="vendor/**,*_test.go"
 
-   ```bash
-   rollup web --urls=https://example.com,https://another-example.com
-   ```
+# Rollup a specific directory
+rollup files --path=/path/to/project
+```
 
-3. Generate a default configuration file:
+### Web Scraping
 
-   ```bash
-   rollup generate
-   ```
+```bash
+# Scrape URLs from command line
+rollup web --urls=https://example.com/docs
 
-4. Use a custom configuration file:
+# Scrape multiple URLs
+rollup web --urls=https://example.com,https://another.com
 
-   ```bash
-   rollup files --config=my-config.yml
-   ```
+# Extract specific content with CSS selector
+rollup web --urls=https://example.com --css=".article-content"
 
-5. Web scraping with separate output files:
+# Exclude elements from scraped content
+rollup web --urls=https://example.com --css=".content" --exclude=".ads,.sidebar"
 
-   ```bash
-   rollup web --urls=https://example.com,https://another-example.com --output=separate
-   ```
+# Output to separate files
+rollup web --urls=https://example.com --output=separate
+```
 
-6. Rollup files with specific types and ignore patterns:
+### Configuration Generation
 
-   ```bash
-   rollup files --types=go,md --ignore=vendor/**,*_test.go
-   ```
+```bash
+# Generate rollup.yml based on files in current directory
+rollup generate
+```
 
-7. Web scraping with depth and CSS selector:
-   ```bash
-   rollup web --urls=https://example.com --depth=2 --css=.main-content
-   ```
+### Using Custom Config
+
+```bash
+rollup files --config=my-config.yml
+rollup web --config=my-config.yml
+```
+
+## Output
+
+### File Rollup Output
+
+The `files` command generates a markdown file named `<project-name>-<timestamp>.rollup.md` containing all matched files:
+
+```markdown
+# File: src/main.go
+
+​```go
+package main
+// ... file contents
+​```
+
+# File: docs/README.md (Code-generated, Read-only)
+
+​```md
+// ... file contents
+​```
+```
+
+### Web Rollup Output
+
+The `web` command generates markdown files from scraped content, with filenames based on the page title or URL.
 
 ## Contributing
 
