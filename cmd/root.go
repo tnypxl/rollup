@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"log"
+
 	"github.com/spf13/cobra"
-	config "github.com/tnypxl/rollup/internal/config"
+	"github.com/tnypxl/rollup/internal/config"
 )
 
 var (
@@ -15,13 +17,31 @@ var rootCmd = &cobra.Command{
 	Short: "Rollup is a tool for combining and processing files",
 	Long: `Rollup is a versatile tool that can combine and process files in various ways.
 Use subcommands to perform specific operations.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Skip config loading for generate and help commands
+		if cmd.Name() == "generate" || cmd.Name() == "help" {
+			return nil
+		}
+
+		// Determine config path
+		configPath := configFile
+		if configPath == "" {
+			configPath = "rollup.yml"
+		}
+
+		// Load configuration
+		var err error
+		cfg, err = config.Load(configPath)
+		if err != nil {
+			log.Printf("Warning: Failed to load configuration from %s: %v", configPath, err)
+			cfg = &config.Config{} // Use empty config if loading fails
+		}
+
+		return nil
+	},
 }
 
-func Execute(conf *config.Config) error {
-	if conf == nil {
-		conf = &config.Config{} // Use an empty config if none is provided
-	}
-	cfg = conf // Set the cfg variable in cmd/files.go
+func Execute() error {
 	return rootCmd.Execute()
 }
 

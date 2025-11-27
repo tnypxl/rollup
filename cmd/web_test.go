@@ -97,8 +97,3 @@ func TestGetFilenameFromContent(t *testing.T) {
 		}
 	}
 }
-
-// Mock functions for testing
-func mockExtractAndConvertContent(urlStr string) (string, error) {
-	return "Mocked content for " + urlStr, nil
-}

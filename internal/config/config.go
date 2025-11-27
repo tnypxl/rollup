@@ -92,6 +92,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("file_extensions or sites must be specified")
 	}
 
+	if c.OutputType != "" && c.OutputType != "single" && c.OutputType != "separate" {
+		return fmt.Errorf("output_type must be 'single' or 'separate'")
+	}
+
 	if c.RequestsPerSecond != nil && *c.RequestsPerSecond <= 0 {
 		return fmt.Errorf("requests_per_second must be positive")
 	}
