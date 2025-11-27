@@ -28,7 +28,19 @@ var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "Scrape main content from webpages and convert to Markdown",
 	Long:  `Scrape the main content from one or more webpages, ignoring navigational elements, ads, and other UI aspects. Convert the content to a well-structured Markdown file.`,
-	RunE:  runWeb,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		// Initialize Playwright for web scraping
+		if err := scraper.InitPlaywright(); err != nil {
+			return fmt.Errorf("failed to initialize Playwright: %w", err)
+		}
+		return nil
+	},
+	RunE: runWeb,
+	PostRunE: func(cmd *cobra.Command, args []string) error {
+		// Clean up Playwright resources
+		scraper.ClosePlaywright()
+		return nil
+	},
 }
 
 func init() {
@@ -142,95 +154,6 @@ func runWeb(cmd *cobra.Command, args []string) error {
 	logger.Println("Scraping completed")
 
 	return nil
-}
-
-func writeSingleFile(content map[string]string) error {
-	outputFile := generateDefaultFilename()
-	file, err := os.Create(outputFile)
-	if err != nil {
-		return fmt.Errorf("error creating output file: %v", err)
-	}
-	defer file.Close()
-
-	for url, c := range content {
-		_, err = fmt.Fprintf(file, "# ::: Content from %s\n\n%s\n\n---\n\n", url, c)
-		if err != nil {
-			return fmt.Errorf("error writing content to file: %v", err)
-		}
-	}
-
-	fmt.Printf("Content has been extracted from %d URL(s) and saved to %s\n", len(content), outputFile)
-	return nil
-}
-
-func writeMultipleFiles(content map[string]string) error {
-	for url, c := range content {
-		filename, err := getFilenameFromContent(c, url)
-		if err != nil {
-			return fmt.Errorf("error generating filename for %s: %v", url, err)
-		}
-
-		file, err := os.Create(filename)
-		if err != nil {
-			return fmt.Errorf("error creating output file %s: %v", filename, err)
-		}
-
-		_, err = file.WriteString(fmt.Sprintf("# ::: Content from %s\n\n%s\n", url, c))
-		if err != nil {
-			file.Close()
-			return fmt.Errorf("error writing content to file %s: %v", filename, err)
-		}
-
-		file.Close()
-		fmt.Printf("Content from %s has been saved to %s\n", url, filename)
-	}
-
-	return nil
-}
-
-func generateDefaultFilename() string {
-	timestamp := time.Now().Format("20060102-150405")
-	return fmt.Sprintf("web-%s.rollup.md", timestamp)
-}
-
-func scrapeURL(urlStr string) (string, error) {
-	content, err := testExtractAndConvertContent(urlStr)
-	if err != nil {
-		return "", err
-	}
-
-	return content, nil
-}
-
-var (
-	testExtractAndConvertContent = extractAndConvertContent
-)
-
-func extractAndConvertContent(urlStr string) (string, error) {
-	content, err := scraper.FetchWebpageContent(urlStr)
-	if err != nil {
-		return "", fmt.Errorf("error fetching webpage content: %v", err)
-	}
-
-	if includeSelector != "" {
-		content, err = scraper.ExtractContentWithCSS(content, includeSelector, excludeSelectors)
-		if err != nil {
-			return "", fmt.Errorf("error extracting content with CSS: %v", err)
-		}
-	}
-
-	markdown, err := scraper.ProcessHTMLContent(content, scraper.Config{})
-	if err != nil {
-		return "", fmt.Errorf("error processing HTML content: %v", err)
-	}
-
-	parsedURL, err := url.Parse(urlStr)
-	if err != nil {
-		return "", fmt.Errorf("error parsing URL: %v", err)
-	}
-	header := fmt.Sprintf("# ::: Content from %s\n\n", parsedURL.String())
-
-	return header + markdown + "\n\n", nil
 }
 
 func getFilenameFromContent(content, urlStr string) (string, error) {
