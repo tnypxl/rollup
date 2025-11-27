@@ -136,6 +136,30 @@ func TestValidate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Valid output type single",
+			config: Config{
+				FileExtensions: []string{"go"},
+				OutputType:     "single",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Valid output type separate",
+			config: Config{
+				FileExtensions: []string{"go"},
+				OutputType:     "separate",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Invalid output type",
+			config: Config{
+				FileExtensions: []string{"go"},
+				OutputType:     "invalid",
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
